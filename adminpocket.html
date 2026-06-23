@@ -1,0 +1,3680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>AdminPocket</title>
+
+<!-- ── PWA META ── -->
+<meta name="application-name" content="AdminPocket">
+<meta name="apple-mobile-web-app-title" content="AdminPocket">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0A2463">
+<meta name="description" content="L'administration simplifiée pour les étrangers. Dossier IA, générateurs, carte des ressources.">
+
+<!-- Manifest PWA -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Icône pour iOS (écran d'accueil) -->
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- Splash screen iOS -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+/* ─────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bleu:    #0A2463;
+  --bleu2:   #1B3E7A;
+  --rouge:   #D62828;
+  --blanc:   #FFFFFF;
+  --fond:    #F4F6FB;
+  --texte:   #1A1A2E;
+  --gris:    #6B7A99;
+  --bordure: #DDE3F0;
+  --or:      #C9A227;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  overflow: hidden; /* Le scroll est dans chaque page */
+}
+
+/* ─────────────────────────────────────────
+   ROUTEUR — chaque page = un écran complet
+───────────────────────────────────────── */
+.page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(30px);
+  transition: opacity .28s ease, transform .28s ease;
+  background: var(--fond);
+  overflow: hidden;
+}
+.page.active {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+.page.out {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* Zone scrollable de chaque page */
+.page-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ─────────────────────────────────────────
+   TOPBAR — fixée dans chaque page
+───────────────────────────────────────── */
+.topbar {
+  flex-shrink: 0;
+  height: 60px;
+  background: var(--bleu);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 12px;
+}
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--blanc);
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.topbar-logo-mark {
+  width: 32px; height: 32px;
+  background: var(--rouge);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.topbar-logo span { color: #A8C4FF; }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Horloge — taille fixe pour ne jamais bouger */
+.clock-box {
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 5px 10px;
+  text-align: right;
+  width: 90px;          /* largeur fixe */
+  flex-shrink: 0;
+}
+.clock-time {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blanc);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  display: block;
+  white-space: nowrap;
+}
+.clock-date {
+  font-size: 9px;
+  color: rgba(255,255,255,0.55);
+  display: block;
+  white-space: nowrap;
+}
+
+/* Bouton topbar */
+.tb-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+.tb-btn:hover { opacity: .85; }
+.tb-btn-ghost {
+  background: rgba(255,255,255,0.12);
+  color: var(--blanc);
+}
+.tb-btn-rouge {
+  background: var(--rouge);
+  color: var(--blanc);
+}
+.tb-btn-blanc {
+  background: var(--blanc);
+  color: var(--bleu);
+}
+
+/* ─────────────────────────────────────────
+   BOUTONS GÉNÉRAUX
+───────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 10px;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .18s;
+  text-decoration: none;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-bleu { background: var(--bleu); color: var(--blanc); }
+.btn-bleu:hover { background: var(--bleu2); }
+.btn-rouge { background: var(--rouge); color: var(--blanc); }
+.btn-rouge:hover { background: #B81F1F; }
+.btn-outline {
+  background: transparent;
+  color: var(--bleu);
+  border: 2px solid var(--bleu);
+}
+.btn-outline:hover { background: var(--bleu); color: var(--blanc); }
+.btn-full { width: 100%; }
+
+/* ─────────────────────────────────────────
+   CARDS
+───────────────────────────────────────── */
+.card {
+  background: var(--blanc);
+  border-radius: 14px;
+  border: 1px solid var(--bordure);
+  padding: 24px;
+}
+
+/* ─────────────────────────────────────────
+   INPUTS
+───────────────────────────────────────── */
+.field { margin-bottom: 16px; }
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gris);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 6px;
+}
+.field input, .field select, .field textarea {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  background: var(--fond);
+  border: 1.5px solid var(--bordure);
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--texte);
+  outline: none;
+  transition: border-color .15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--bleu);
+}
+.field textarea { height: 100px; padding: 12px 14px; resize: none; }
+
+/* ─────────────────────────────────────────
+   BANDEAU TRICOLORE DÉCORATIF
+───────────────────────────────────────── */
+.tricolore {
+  height: 4px;
+  background: linear-gradient(90deg, var(--bleu) 33%, var(--blanc) 33%, var(--blanc) 66%, var(--rouge) 66%);
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────
+   CHIPS / BADGES
+───────────────────────────────────────── */
+.chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.chip-vert  { background: #E8F9F0; color: #15803D; }
+.chip-rouge { background: #FEF2F2; color: #B91C1C; }
+.chip-amber { background: #FFFBEB; color: #B45309; }
+.chip-bleu  { background: #EFF6FF; color: var(--bleu); }
+
+
+/* ═══════════════════════════════════════
+   PAGE 1 — ACCUEIL / LANDING
+═══════════════════════════════════════ */
+.landing-hero {
+  background: var(--bleu);
+  padding: 56px 24px 48px;
+  text-align: center;
+}
+.landing-hero h1 {
+  font-size: clamp(28px, 6vw, 52px);
+  font-weight: 800;
+  color: var(--blanc);
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+.landing-hero h1 span { color: #A8C4FF; }
+.landing-hero p {
+  font-size: 16px;
+  color: rgba(255,255,255,0.65);
+  max-width: 480px;
+  margin: 0 auto 32px;
+  line-height: 1.7;
+}
+.landing-hero-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.landing-features {
+  padding: 48px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.landing-features h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--bleu);
+  margin-bottom: 24px;
+  text-align: center;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.feat-card {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+}
+.feat-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+.feat-card h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--bleu);
+  margin-bottom: 6px;
+}
+.feat-card p {
+  font-size: 13px;
+  color: var(--gris);
+  line-height: 1.6;
+}
+
+.landing-cta {
+  background: var(--rouge);
+  margin: 0 24px 48px;
+  border-radius: 16px;
+  padding: 36px 24px;
+  text-align: center;
+  max-width: 852px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.landing-cta h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--blanc);
+  margin-bottom: 8px;
+}
+.landing-cta p {
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 20px;
+}
+
+/* ═══════════════════════════════════════
+   PAGE 2 — INSCRIPTION
+═══════════════════════════════════════ */
+.auth-wrap {
+  max-width: 440px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+.auth-wrap h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--bleu);
+  margin-bottom: 4px;
+}
+.auth-wrap .auth-sub {
+  font-size: 14px;
+  color: var(--gris);
+  margin-bottom: 28px;
+}
+.auth-switch {
+  text-align: center;
+  font-size: 13px;
+  color: var(--gris);
+  margin-top: 20px;
+}
+.auth-switch a {
+  color: var(--bleu);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Étapes visuelles */
+.steps-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 28px;
+}
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.step-dot {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--bordure);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gris);
+  background: var(--blanc);
+  transition: all .2s;
+}
+.step-dot.done  { background: var(--vert, #15803D); border-color: #15803D; color: #fff; }
+.step-dot.active { background: var(--bleu); border-color: var(--bleu); color: #fff; }
+.step-label { font-size: 10px; color: var(--gris); font-weight: 500; text-align: center; }
+.step-line { flex: 1; height: 2px; background: var(--bordure); margin-bottom: 14px; }
+.step-line.done { background: #15803D; }
+
+/* ═══════════════════════════════════════
+   PAGE 3 — LANGUE
+═══════════════════════════════════════ */
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.lang-btn {
+  background: var(--blanc);
+  border: 2px solid var(--bordure);
+  border-radius: 12px;
+  padding: 18px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .18s;
+}
+.lang-btn:hover { border-color: var(--bleu); }
+.lang-btn.active { border-color: var(--bleu); background: #EFF6FF; }
+.lang-btn .flag { font-size: 28px; display: block; margin-bottom: 6px; }
+.lang-btn .nom  { font-size: 12px; font-weight: 600; color: var(--texte); }
+
+/* ═══════════════════════════════════════
+   PAGE 4 — ANALYSE VOCALE
+═══════════════════════════════════════ */
+.voice-center { padding: 32px 20px; max-width: 560px; margin: 0 auto; }
+.voice-center h2 {
+  font-size: 22px; font-weight: 800;
+  color: var(--bleu); margin-bottom: 6px;
+}
+.voice-center .sub {
+  font-size: 14px; color: var(--gris);
+  margin-bottom: 32px; line-height: 1.6;
+}
+
+.mic-zone {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.mic-ring {
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  border: 3px solid var(--bordure);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  transition: all .3s;
+}
+.mic-ring.on {
+  border-color: var(--rouge);
+  box-shadow: 0 0 0 12px rgba(214,40,40,0.08);
+  animation: mic-pulse 1.4s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(214,40,40,0.15); }
+  50%      { box-shadow: 0 0 0 16px rgba(214,40,40,0); }
+}
+.mic-btn {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bleu);
+  color: var(--blanc);
+  font-size: 30px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.mic-btn.on { background: var(--rouge); }
+.mic-hint { font-size: 13px; color: var(--gris); margin-top: 12px; }
+
+.or-ligne {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--gris); font-size: 13px; margin: 20px 0;
+}
+.or-ligne::before, .or-ligne::after {
+  content: ''; flex: 1; height: 1px; background: var(--bordure);
+}
+
+/* ═══════════════════════════════════════
+   PAGE 5 — RÉSUMÉ IA
+═══════════════════════════════════════ */
+.summary-wrap { padding: 28px 20px; max-width: 680px; margin: 0 auto; }
+.summary-wrap h2 { font-size: 22px; font-weight: 800; color: var(--bleu); margin-bottom: 4px; }
+.summary-wrap .sub { font-size: 14px; color: var(--gris); margin-bottom: 24px; }
+
+.ia-loading {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  padding: 40px;
+  text-align: center;
+}
+.ia-spinner {
+  width: 44px; height: 44px;
+  border: 3px solid var(--bordure);
+  border-top-color: var(--bleu);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ia-loading p { font-size: 14px; color: var(--gris); }
+
+.summary-grid { display: flex; flex-direction: column; gap: 14px; }
+.s-card { background: var(--blanc); border: 1px solid var(--bordure); border-radius: 14px; padding: 22px 24px; }
+.s-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--bleu); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.s-card h3 { font-size: 17px; font-weight: 800; color: var(--texte); margin-bottom: 6px; }
+.s-card p  { font-size: 14px; color: var(--gris); line-height: 1.65; }
+.s-list    { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.s-list li { font-size: 14px; color: var(--texte); display: flex; gap: 8px; }
+.s-list li::before { content: '→'; color: var(--bleu); font-weight: 700; flex-shrink: 0; }
+.s-alert {
+  background: #FEF2F2; border: 1px solid #FECACA;
+  border-radius: 12px; padding: 16px 20px;
+  font-size: 13px; color: #B91C1C; line-height: 1.6;
+}
+.s-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* ═══════════════════════════════════════
+   PAGE 6 — PAIEMENT
+═══════════════════════════════════════ */
+.pay-wrap { padding: 28px 20px; max-width: 700px; margin: 0 auto; }
+.pay-wrap h2 { font-size: 22px; font-weight: 800; color: var(--bleu); margin-bottom: 4px; }
+.pay-wrap .sub { font-size: 14px; color: var(--gris); margin-bottom: 24px; }
+
+.plans { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.plan {
+  background: var(--blanc);
+  border: 2px solid var(--bordure);
+  border-radius: 14px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.plan:hover  { border-color: var(--bleu); }
+.plan.chosen { border-color: var(--bleu); background: #EFF6FF; }
+.plan-badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--rouge); color: var(--blanc);
+  font-size: 11px; font-weight: 700;
+  padding: 4px 14px; border-radius: 100px;
+  white-space: nowrap;
+}
+.plan-name { font-size: 13px; font-weight: 700; color: var(--gris); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.plan-price { font-size: 38px; font-weight: 800; color: var(--bleu); line-height: 1; margin-bottom: 4px; }
+.plan-price span { font-size: 14px; font-weight: 400; color: var(--gris); }
+.plan-period { font-size: 12px; color: var(--gris); margin-bottom: 16px; }
+.plan-feats { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.plan-feats li { font-size: 13px; color: var(--texte); display: flex; gap: 7px; }
+.plan-feats li::before { content: '✓'; color: #15803D; font-weight: 700; }
+
+.pay-methods { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.pay-m {
+  flex: 1; min-width: 80px;
+  padding: 10px;
+  background: var(--blanc);
+  border: 1.5px solid var(--bordure);
+  border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  color: var(--texte);
+  cursor: pointer; text-align: center;
+  transition: all .18s;
+}
+.pay-m.chosen, .pay-m:hover { border-color: var(--bleu); color: var(--bleu); background: #EFF6FF; }
+
+.pay-secure { font-size: 11px; color: var(--gris); text-align: center; margin-top: 12px; }
+
+/* ═══════════════════════════════════════
+   DASHBOARD — STRUCTURE
+═══════════════════════════════════════ */
+
+/* La page dashboard n'a pas de page-body générique
+   — elle a sa propre structure interne */
+.dash-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.dash-sidebar {
+  width: 230px;
+  flex-shrink: 0;
+  background: var(--bleu);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px 0;
+}
+
+.ds-section {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  padding: 16px 20px 6px;
+}
+
+.ds-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 20px;
+  font-size: 14px; font-weight: 500;
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  border: none; background: transparent;
+  width: 100%; text-align: left;
+  transition: all .15s;
+  position: relative;
+}
+.ds-item:hover { background: rgba(255,255,255,0.07); color: var(--blanc); }
+.ds-item.on {
+  background: rgba(255,255,255,0.12);
+  color: var(--blanc);
+  font-weight: 700;
+}
+.ds-item.on::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 22px;
+  background: var(--rouge);
+  border-radius: 0 3px 3px 0;
+}
+.ds-icon { font-size: 17px; width: 22px; text-align: center; flex-shrink: 0; }
+.ds-badge {
+  margin-left: auto;
+  background: var(--rouge);
+  color: var(--blanc);
+  font-size: 10px; font-weight: 800;
+  padding: 2px 7px; border-radius: 100px;
+}
+
+.ds-user {
+  margin-top: auto;
+  padding: 16px 20px 0;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.ds-user-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 10px;
+  background: rgba(255,255,255,0.07);
+}
+.ds-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--rouge);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: var(--blanc);
+  flex-shrink: 0;
+}
+.ds-user-name { font-size: 13px; font-weight: 600; color: var(--blanc); }
+.ds-user-plan { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 1px; }
+
+/* Zone principale dashboard */
+.dash-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--fond);
+}
+
+/* Topbar interne dashboard (sous la topbar globale) */
+.dash-bar {
+  flex-shrink: 0;
+  padding: 20px 28px 0;
+}
+.dash-bar h1 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--bleu);
+}
+.dash-bar .dash-sub {
+  font-size: 13px;
+  color: var(--gris);
+  margin-top: 3px;
+}
+
+/* Contenu scrollable dashboard */
+.dash-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px 32px;
+}
+
+/* Onglets dashboard */
+.dash-tab { display: none; }
+.dash-tab.on { display: block; }
+
+/* ─────────────────────────────────────────
+   COMPOSANTS DASHBOARD
+───────────────────────────────────────── */
+
+/* KPI */
+.kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+.kpi {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 13px;
+  padding: 20px;
+}
+.kpi-label { font-size: 11px; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+.kpi-val { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.kpi-val.bleu { color: var(--bleu); }
+.kpi-val.vert { color: #15803D; }
+.kpi-val.rouge { color: var(--rouge); }
+.kpi-sub { font-size: 12px; color: var(--gris); }
+
+/* Progression */
+.prog-card {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 13px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+}
+.prog-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.prog-card-top h3 { font-size: 16px; font-weight: 800; color: var(--bleu); }
+.prog-pct { font-size: 24px; font-weight: 800; color: var(--bleu); }
+.prog-track { height: 9px; background: var(--fond); border-radius: 100px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--bleu), #4A7ADB); border-radius: 100px; transition: width 1.4s ease; }
+.prog-row { display: flex; justify-content: space-between; margin-top: 8px; }
+.prog-row span { font-size: 11px; color: var(--gris); }
+
+/* 2 colonnes */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+/* Doc list */
+.doc-list { list-style: none; }
+.doc-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--bordure);
+}
+.doc-row:last-child { border-bottom: none; }
+.doc-cb {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  border: 1.5px solid var(--bordure);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: transparent;
+  cursor: pointer; transition: all .2s;
+}
+.doc-cb.ok { background: #15803D; border-color: #15803D; color: #fff; }
+.doc-txt { flex: 1; font-size: 13px; }
+.doc-txt.ok { text-decoration: line-through; color: var(--gris); }
+.doc-up {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--fond);
+  border: none; color: var(--gris);
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .18s;
+}
+.doc-up:hover { background: #EFF6FF; color: var(--bleu); }
+
+/* Messages */
+.msg-list { display: flex; flex-direction: column; gap: 12px; }
+.msg {
+  display: flex; gap: 12px;
+  padding: 14px 16px;
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 12px;
+  transition: border-color .15s;
+}
+.msg.unread { border-color: #BFDBFE; background: #F0F7FF; }
+.msg:hover { border-color: var(--bleu); }
+.msg-av {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+  background: var(--fond);
+}
+.msg-body { flex: 1; min-width: 0; }
+.msg-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.msg-name { font-size: 13px; font-weight: 700; }
+.msg-new { font-size: 9px; font-weight: 800; background: var(--rouge); color: #fff; padding: 2px 6px; border-radius: 100px; }
+.msg-time { font-size: 11px; color: var(--gris); margin-left: auto; }
+.msg-text { font-size: 13px; color: var(--gris); line-height: 1.55; }
+
+/* Timeline étapes */
+.timeline { display: flex; flex-direction: column; }
+.tl { display: flex; gap: 16px; position: relative; }
+.tl:not(:last-child) .tl-spine::after {
+  content: '';
+  position: absolute;
+  left: 19px; top: 40px;
+  width: 2px; height: calc(100% - 4px);
+  background: var(--bordure);
+}
+.tl.done:not(:last-child) .tl-spine::after { background: #BBF7D0; }
+.tl.now:not(:last-child)  .tl-spine::after { background: #BFDBFE; }
+.tl-spine { position: relative; flex-shrink: 0; }
+.tl-dot {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  background: var(--fond);
+  border: 1.5px solid var(--bordure);
+  margin-bottom: 24px;
+}
+.tl-dot.done { background: #F0FDF4; border-color: #86EFAC; }
+.tl-dot.now  { background: #EFF6FF; border-color: #93C5FD; }
+.tl-dot.wait { opacity: .4; }
+.tl-body { flex: 1; padding-bottom: 24px; }
+.tl-name { font-size: 14px; font-weight: 700; color: var(--texte); margin-bottom: 3px; }
+.tl-name.now { color: var(--bleu); }
+.tl-desc { font-size: 13px; color: var(--gris); line-height: 1.6; }
+.tl-date { font-size: 11px; color: var(--gris); margin-top: 4px; }
+
+/* RDV */
+.rdv-card {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  padding: 28px;
+  margin-bottom: 16px;
+}
+.rdv-top { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.rdv-top h3 { font-size: 18px; font-weight: 800; color: var(--bleu); }
+.rdv-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.rdv-f label { font-size: 10px; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 4px; }
+.rdv-f p { font-size: 14px; font-weight: 600; color: var(--texte); }
+.rdv-f .code { font-size: 13px; color: var(--bleu); font-weight: 700; }
+.rdv-note {
+  margin-top: 20px;
+  padding: 14px 18px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  font-size: 13px; color: #B45309;
+  line-height: 1.6;
+}
+
+/* Emploi */
+.emploi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ec {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 13px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all .18s;
+}
+.ec:hover { border-color: var(--bleu); transform: translateY(-1px); }
+.ec-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ec-icon { font-size: 28px; }
+.ec-name { font-size: 14px; font-weight: 700; color: var(--bleu); }
+.ec-loc  { font-size: 11px; color: var(--gris); margin-top: 1px; }
+.ec-desc { font-size: 13px; color: var(--gris); line-height: 1.6; }
+
+/* Map */
+.map-shell {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  height: 500px;
+  background: #E8EEF8;
+  border: 1px solid var(--bordure);
+}
+#mapbox { width: 100%; height: 100%; }
+.map-btns {
+  position: absolute; top: 12px; left: 12px; z-index: 10;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.map-btn {
+  padding: 8px 14px; border-radius: 9px;
+  background: rgba(255,255,255,0.95);
+  border: 1.5px solid var(--bordure);
+  font-size: 12px; font-weight: 700;
+  color: var(--texte); cursor: pointer;
+  transition: all .15s;
+  font-family: 'Inter', sans-serif;
+}
+.map-btn:hover, .map-btn.on { border-color: var(--bleu); color: var(--bleu); background: #EFF6FF; }
+.map-leg {
+  position: absolute; top: 12px; right: 12px; z-index: 10;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid var(--bordure);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 180px;
+}
+.map-leg-title { font-size: 11px; font-weight: 800; color: var(--gris); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.ml { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 12px; color: var(--texte); }
+.ml-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* Quiz */
+.quiz-card { background: var(--blanc); border: 1px solid var(--bordure); border-radius: 14px; padding: 28px; max-width: 600px; }
+.quiz-q { font-size: 17px; font-weight: 700; color: var(--texte); margin: 20px 0; line-height: 1.5; }
+.quiz-opts { display: flex; flex-direction: column; gap: 9px; }
+.qo {
+  padding: 14px 18px;
+  background: var(--fond);
+  border: 1.5px solid var(--bordure);
+  border-radius: 10px;
+  font-size: 14px; font-weight: 500;
+  color: var(--texte); cursor: pointer;
+  text-align: left; transition: all .15s;
+  font-family: 'Inter', sans-serif;
+}
+.qo:hover { border-color: var(--bleu); color: var(--bleu); background: #EFF6FF; }
+.qo.bon  { background: #F0FDF4; border-color: #86EFAC; color: #15803D; pointer-events: none; }
+.qo.mal  { background: #FEF2F2; border-color: #FECACA; color: #B91C1C; pointer-events: none; }
+
+/* CV */
+.cv-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.cv-preview {
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 12px;
+  min-height: 420px; padding: 32px;
+  text-align: center;
+}
+.cv-prev-icon { font-size: 48px; opacity: .2; }
+.cv-prev-txt { font-size: 13px; color: var(--gris); line-height: 1.7; }
+
+/* Paramètres */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Alerte */
+.alerte {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+.alerte.amber { background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; }
+.alerte.rouge { background: #FEF2F2; border: 1px solid #FECACA; color: #B91C1C; }
+.alerte.vert  { background: #F0FDF4; border: 1px solid #BBF7D0; color: #15803D; }
+.alerte-icon  { font-size: 18px; flex-shrink: 0; }
+.alerte-body  { flex: 1; }
+.alerte-body strong { display: block; font-weight: 700; margin-bottom: 1px; }
+.alerte-action {
+  padding: 7px 14px; border-radius: 7px;
+  border: none; cursor: pointer;
+  font-size: 12px; font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  background: rgba(0,0,0,0.08);
+  color: inherit; white-space: nowrap;
+  transition: opacity .15s;
+}
+.alerte-action:hover { opacity: .75; }
+
+/* Msg compose */
+.compose {
+  display: flex; gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--bordure);
+  margin-top: 16px;
+}
+.compose input {
+  flex: 1; height: 44px; padding: 0 14px;
+  background: var(--fond);
+  border: 1.5px solid var(--bordure);
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif; font-size: 13px;
+  color: var(--texte); outline: none;
+  transition: border-color .15s;
+}
+.compose input:focus { border-color: var(--bleu); }
+.compose input::placeholder { color: var(--gris); }
+.compose button {
+  height: 44px; padding: 0 18px;
+  background: var(--bleu); color: var(--blanc);
+  border: none; border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: background .15s;
+}
+.compose button:hover { background: var(--bleu2); }
+
+/* ─────────────────────────────────────────
+   BANDEAU TÉLÉPHONE (dashboard)
+───────────────────────────────────────── */
+.phone-strip {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+.phone-left { display: flex; align-items: center; gap: 10px; }
+.phone-dot { width: 8px; height: 8px; border-radius: 50%; background: #15803D; animation: blink-dot 2s infinite; }
+@keyframes blink-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+.phone-info strong { font-size: 14px; font-weight: 700; color: #15803D; display: block; }
+.phone-info span   { font-size: 12px; color: var(--gris); }
+.phone-btn {
+  padding: 10px 18px;
+  background: #15803D; color: #fff;
+  border: none; border-radius: 9px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.phone-btn:hover { background: #166534; }
+
+/* ─────────────────────────────────────────
+   UTILITAIRES
+───────────────────────────────────────── */
+.hidden { display: none !important; }
+.mt8 { margin-top: 8px; }
+.mt16 { margin-top: 16px; }
+.mt24 { margin-top: 24px; }
+.mb16 { margin-bottom: 16px; }
+.txt-bleu { color: var(--bleu); }
+.txt-gris { color: var(--gris); font-size: 13px; }
+.center { text-align: center; }
+
+/* Sectiontitle */
+.section-title { font-size: 17px; font-weight: 800; color: var(--bleu); margin-bottom: 4px; }
+.section-sub   { font-size: 13px; color: var(--gris); margin-bottom: 20px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dash-sidebar { display: none; }
+  .kpi-row      { grid-template-columns: 1fr 1fr; }
+  .g2, .s-two, .rdv-fields, .plans, .emploi-grid, .cv-wrap, .settings-grid { grid-template-columns: 1fr; }
+  .topbar { padding: 0 12px; }
+  .lang-grid { grid-template-columns: repeat(2,1fr); }
+}
+
+
+/* ─────────────────────────────────────────
+   TIROIR GÉNÉRATEURS
+───────────────────────────────────────── */
+.gen-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(10,36,99,0.45);
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+}
+.gen-overlay.open { opacity: 1; pointer-events: all; }
+
+.gen-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 360px; max-width: 92vw;
+  background: #fff;
+  box-shadow: -8px 0 40px rgba(10,36,99,0.18);
+  z-index: 201;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .32s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+.gen-drawer.open { transform: translateX(0); }
+
+.gen-drawer-head {
+  background: var(--bleu);
+  padding: 20px 20px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.gen-drawer-title {
+  font-size: 16px; font-weight: 800; color: #fff;
+  display: flex; align-items: center; gap: 10px;
+}
+.gen-drawer-close {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: none; color: #fff; font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.gen-drawer-close:hover { background: rgba(255,255,255,0.25); }
+
+.gen-drawer-sub {
+  font-size: 11px; color: rgba(255,255,255,0.6);
+  padding: 0 20px 14px;
+  flex-shrink: 0;
+  background: var(--bleu);
+}
+
+.gen-drawer-body {
+  flex: 1; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.gen-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  background: var(--fond);
+  border: 1.5px solid var(--bordure);
+  border-radius: 12px;
+  cursor: pointer; transition: all .18s;
+  text-decoration: none;
+}
+.gen-item:hover {
+  border-color: var(--bleu);
+  background: #EFF6FF;
+  transform: translateX(3px);
+}
+.gen-item-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.gen-item-icon.rouge { background: #FEF2F2; }
+.gen-item-icon.bleu  { background: #EFF6FF; }
+.gen-item-icon.vert  { background: #F0FDF4; }
+.gen-item-icon.amber { background: #FFFBEB; }
+.gen-item-icon.violet { background: #F5F3FF; }
+.gen-item-body { flex: 1; min-width: 0; }
+.gen-item-name { font-size: 14px; font-weight: 700; color: var(--texte); margin-bottom: 2px; }
+.gen-item-desc { font-size: 11px; color: var(--gris); line-height: 1.4; }
+.gen-item-arrow { font-size: 14px; color: var(--gris); flex-shrink: 0; }
+
+.gen-section-label {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--gris); padding: 8px 4px 4px;
+}
+
+/* Bouton rouge clignotant */
+.btn-gen {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--rouge);
+  border: none; color: #fff; font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  position: relative;
+  animation: gen-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+  transition: transform .15s;
+}
+.btn-gen:hover { transform: scale(1.08); animation: none; background: #B81F1F; }
+@keyframes gen-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(214,40,40,0.5); }
+  50%      { box-shadow: 0 0 0 8px rgba(214,40,40,0); }
+}
+.btn-gen-dot {
+  position: absolute; top: -3px; right: -3px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #FFD700; border: 2px solid #fff;
+}
+
+/* Carte améliorée */
+.map-shell { border-radius: 14px; overflow: hidden; height: 520px; border: 1px solid var(--bordure); position: relative; }
+#mapbox { width: 100%; height: 100%; }
+
+
+/* ─────────────────────────────────────────
+   CONVERTISSEUR DE DOCUMENTS
+───────────────────────────────────────── */
+.conv-drop-zone {
+  border: 2.5px dashed var(--bordure);
+  border-radius: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--fond);
+  position: relative;
+}
+.conv-drop-zone:hover,
+.conv-drop-zone.dragover {
+  border-color: var(--bleu);
+  background: #EFF6FF;
+}
+.conv-drop-icon { font-size: 52px; margin-bottom: 16px; opacity: .5; }
+.conv-drop-title { font-size: 16px; font-weight: 700; color: var(--bleu); margin-bottom: 6px; }
+.conv-drop-sub   { font-size: 13px; color: var(--gris); line-height: 1.6; }
+.conv-drop-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.conv-formats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px,1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+.conv-format-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--bordure);
+  background: var(--blanc);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 600;
+  color: var(--texte);
+  transition: all .18s;
+}
+.conv-format-btn:hover  { border-color: var(--bleu); color: var(--bleu); background: #EFF6FF; }
+.conv-format-btn.chosen { border-color: var(--bleu); background: var(--bleu); color: #fff; }
+.conv-format-icon { font-size: 18px; }
+
+.conv-arrow {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: var(--gris); padding: 8px 0;
+}
+
+.conv-file-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  background: #EFF6FF;
+  border: 1.5px solid #BFDBFE;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.conv-file-icon { font-size: 32px; flex-shrink: 0; }
+.conv-file-name { font-size: 14px; font-weight: 700; color: var(--bleu); }
+.conv-file-size { font-size: 12px; color: var(--gris); margin-top: 2px; }
+.conv-file-remove {
+  margin-left: auto; width: 28px; height: 28px;
+  border-radius: 50%; border: none; background: var(--rouge);
+  color: #fff; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s;
+}
+.conv-file-remove:hover { opacity: .8; }
+
+.conv-progress-bar {
+  height: 8px; background: var(--fond); border-radius: 100px; overflow: hidden; margin: 8px 0;
+}
+.conv-progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--bleu), #4A7ADB);
+  border-radius: 100px; width: 0%;
+  transition: width .4s ease;
+}
+
+.conv-result {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px;
+  background: #F0FDF4;
+  border: 1.5px solid #BBF7D0;
+  border-radius: 12px;
+}
+.conv-result-icon { font-size: 32px; flex-shrink: 0; }
+.conv-result-info { flex: 1; }
+.conv-result-name { font-size: 14px; font-weight: 700; color: #15803D; }
+.conv-result-sub  { font-size: 12px; color: var(--gris); margin-top: 2px; }
+
+.conv-history-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: var(--blanc);
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.conv-history-from { color: var(--gris); }
+.conv-history-arrow { color: var(--bleu); font-weight: 700; }
+.conv-history-to { font-weight: 700; color: var(--bleu); }
+.conv-history-time { margin-left: auto; font-size: 11px; color: var(--gris); }
+.conv-dl {
+  margin-left: 8px; padding: 5px 10px;
+  background: var(--bleu); color: #fff;
+  border: none; border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: background .15s;
+}
+.conv-dl:hover { background: var(--bleu2); }
+
+
+/* ─────────────────────────────────────────
+   BOUTON VOCAL DU TIROIR
+───────────────────────────────────────── */
+.gen-vocal-btn {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  color: #fff; font-size: 17px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+  flex-shrink: 0;
+  position: relative;
+}
+.gen-vocal-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
+.gen-vocal-btn.playing {
+  background: #D62828;
+  border-color: #D62828;
+  animation: vocal-pulse 1.2s ease-in-out infinite;
+}
+@keyframes vocal-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(214,40,40,0.5); }
+  50%      { box-shadow: 0 0 0 10px rgba(214,40,40,0); }
+}
+
+/* Bulle audio qui apparaît sur chaque item */
+.gen-audio-bubble {
+  display: none;
+  background: var(--bleu);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: -4px 0 6px 0;
+  font-size: 13px;
+  line-height: 1.65;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.gen-audio-bubble::before {
+  content: '';
+  position: absolute;
+  top: -7px; left: 20px;
+  width: 0; height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid var(--bleu);
+}
+.gen-audio-bubble.visible { display: block; animation: fadeSlide .2s ease; }
+@keyframes fadeSlide {
+  from { opacity:0; transform:translateY(-4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.gen-audio-bubble-bar {
+  display: flex; align-items: center; gap: 3px;
+  margin-top: 10px;
+}
+.gen-audio-wave {
+  width: 3px; border-radius: 2px;
+  background: rgba(255,255,255,0.7);
+  animation: wave-bar .8s ease-in-out infinite alternate;
+}
+.gen-audio-wave:nth-child(1) { height: 8px;  animation-delay: 0s; }
+.gen-audio-wave:nth-child(2) { height: 14px; animation-delay: .1s; }
+.gen-audio-wave:nth-child(3) { height: 10px; animation-delay: .2s; }
+.gen-audio-wave:nth-child(4) { height: 16px; animation-delay: .15s; }
+.gen-audio-wave:nth-child(5) { height: 8px;  animation-delay: .05s; }
+.gen-audio-wave:nth-child(6) { height: 12px; animation-delay: .25s; }
+@keyframes wave-bar {
+  from { transform: scaleY(0.4); }
+  to   { transform: scaleY(1.2); }
+}
+.gen-audio-stop {
+  margin-left: auto;
+  background: rgba(255,255,255,0.2);
+  border: none; border-radius: 6px;
+  color: #fff; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background .15s;
+}
+.gen-audio-stop:hover { background: rgba(255,255,255,0.35); }
+
+/* Item vocal hover */
+.gen-item-vocal {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--fond);
+  border: 1px solid var(--bordure);
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all .18s;
+  margin-right: 2px;
+}
+.gen-item-vocal:hover { background: #EFF6FF; border-color: var(--bleu); }
+.gen-item-vocal.playing { background: var(--rouge); border-color: var(--rouge); color: #fff; }
+
+
+/* ─────────────────────────────────────────
+   PAIEMENT STRIPE
+───────────────────────────────────────── */
+.stripe-plan {
+  background: var(--blanc);
+  border: 2px solid var(--bordure);
+  border-radius: 16px;
+  padding: 28px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.stripe-plan:hover  { border-color: var(--bleu); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(10,36,99,0.1); }
+.stripe-plan.chosen { border-color: var(--bleu); background: #EFF6FF; }
+.stripe-plan.premium-plan { border-color: var(--rouge); }
+.stripe-plan.premium-plan.chosen { background: #FFF5F5; }
+
+.stripe-badge {
+  position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+  background: var(--rouge); color: #fff;
+  font-size: 11px; font-weight: 800;
+  padding: 4px 16px; border-radius: 100px;
+  white-space: nowrap; font-family: 'Inter', sans-serif;
+}
+
+.stripe-btn {
+  width: 100%; padding: 16px;
+  border-radius: 12px; border: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px; font-weight: 800;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 12px;
+}
+.stripe-btn-standard {
+  background: var(--bleu); color: #fff;
+}
+.stripe-btn-standard:hover { background: #122B57; transform: translateY(-1px); }
+.stripe-btn-premium {
+  background: var(--rouge); color: #fff;
+}
+.stripe-btn-premium:hover { background: #B81F1F; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(214,40,40,0.3); }
+
+.stripe-secure {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: 11px; color: var(--gris); margin-top: 10px;
+}
+
+.stripe-info-box {
+  background: #F0FDF4; border: 1px solid #BBF7D0;
+  border-radius: 12px; padding: 16px 18px;
+  margin-bottom: 20px;
+  font-size: 13px; color: #15803D; line-height: 1.65;
+}
+.stripe-qonto-box {
+  background: #EFF6FF; border: 1px solid #BFDBFE;
+  border-radius: 12px; padding: 16px 18px;
+  margin-top: 16px; font-size: 13px; color: var(--bleu); line-height: 1.7;
+}
+.stripe-qonto-box strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+
+/* ─────────────────────────────────────────
+   PARAMÈTRES COMPLETS
+───────────────────────────────────────── */
+.params-tabs {
+  display: flex; gap: 4px;
+  background: var(--fond);
+  border-radius: 12px; padding: 4px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.params-tab-btn {
+  flex: 1; min-width: 100px;
+  padding: 10px 16px; border-radius: 9px;
+  border: none; background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: var(--gris); cursor: pointer;
+  transition: all .18s;
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+}
+.params-tab-btn:hover { color: var(--texte); }
+.params-tab-btn.on { background: var(--blanc); color: var(--bleu); font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+.params-section { display: none; }
+.params-section.on { display: block; }
+
+.params-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--bordure);
+  gap: 16px;
+}
+.params-row:last-child { border-bottom: none; }
+.params-row-label { font-size: 14px; font-weight: 600; color: var(--texte); }
+.params-row-sub   { font-size: 12px; color: var(--gris); margin-top: 2px; }
+
+/* Toggle switch */
+.toggle-wrap { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-wrap input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #D1D5DB; border-radius: 100px;
+  transition: .2s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background: #fff; border-radius: 50%;
+  transition: .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-wrap input:checked + .toggle-slider { background: var(--bleu); }
+.toggle-wrap input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* Factures */
+.facture-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  background: var(--fond);
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.facture-icon { font-size: 24px; flex-shrink: 0; }
+.facture-info { flex: 1; }
+.facture-nom  { font-size: 14px; font-weight: 600; }
+.facture-date { font-size: 12px; color: var(--gris); margin-top: 2px; }
+.facture-montant { font-size: 15px; font-weight: 800; color: var(--bleu); }
+.facture-dl {
+  padding: 7px 14px; border-radius: 8px;
+  background: var(--bleu); color: #fff;
+  border: none; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: background .15s;
+}
+.facture-dl:hover { background: #122B57; }
+
+/* Danger zone */
+.danger-card {
+  background: #FEF2F2; border: 1px solid #FECACA;
+  border-radius: 14px; padding: 24px;
+  margin-top: 16px;
+}
+.danger-card h3 { font-size: 15px; font-weight: 700; color: var(--rouge); margin-bottom: 8px; }
+.danger-card p  { font-size: 13px; color: #7F1D1D; line-height: 1.6; margin-bottom: 16px; }
+.btn-danger {
+  padding: 11px 20px; border-radius: 10px;
+  background: transparent; border: 1.5px solid var(--rouge);
+  color: var(--rouge); font-family: 'Inter', sans-serif;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: all .18s;
+}
+.btn-danger:hover { background: var(--rouge); color: #fff; }
+
+/* Sécurité */
+.secu-card {
+  background: var(--blanc); border: 1px solid var(--bordure);
+  border-radius: 14px; padding: 20px 24px; margin-bottom: 14px;
+}
+.secu-card h3 { font-size: 14px; font-weight: 700; color: var(--bleu); margin-bottom: 16px; }
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PAGE 1 — ACCUEIL
+══════════════════════════════════════════ -->
+<div class="page active" id="p-accueil">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c1t">00:00</span>
+        <span class="clock-date" id="c1d">—</span>
+      </div>
+      <button class="tb-btn tb-btn-ghost" onclick="aller('p-login')">Se connecter</button>
+      <button class="tb-btn tb-btn-rouge" onclick="aller('p-register')">Commencer</button>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+
+  <!-- Scrollable -->
+  <div class="page-body">
+    <div class="landing-hero">
+      <h1>L'administration simplifiée<br><span>pour les étrangers</span></h1>
+      <p>Parlez dans votre langue, l'IA génère votre dossier complet — titre de séjour, asile, naturalisation.</p>
+      <div class="landing-hero-btns">
+        <button class="btn btn-rouge" onclick="aller('p-register')">Créer mon dossier gratuit</button>
+        <button class="btn" style="background:rgba(255,255,255,0.15);color:#fff;" onclick="aller('p-login')">J'ai déjà un compte</button>
+      </div>
+    </div>
+
+    <div class="landing-features">
+      <h2>Tout ce dont vous avez besoin</h2>
+      <div class="features-grid">
+        <div class="feat-card">
+          <div class="feat-icon">🎤</div>
+          <h3>Analyse vocale</h3>
+          <p>Parlez librement, l'IA comprend votre situation et identifie vos démarches.</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">🌍</div>
+          <h3>10 langues</h3>
+          <p>Français, arabe, anglais, espagnol, russe et plus encore.</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">📁</div>
+          <h3>Dossier complet</h3>
+          <p>Documents, étapes, délais — tout généré automatiquement pour votre profil.</p>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon">📞</div>
+          <h3>Conseiller humain</h3>
+          <p>Assistance téléphonique de 9h30 à 16h30 avec un vrai conseiller.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="landing-cta" style="margin-bottom:48px;">
+      <h2>Besoin d'aide sur l'application ?</h2>
+      <p style="margin-bottom:28px;">Notre équipe est disponible pour vous accompagner et répondre à toutes vos questions sur AdminPocket.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;">
+
+        <div style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:20px;text-align:left;">
+          <div style="font-size:26px;margin-bottom:10px;">📞</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">Appel gratuit</div>
+          <div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:3px;">+33 06 25 55 97 97</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px;">Lun – Ven · 10h – 17h</div>
+          <a href="tel:+33625559797" style="display:inline-block;padding:9px 16px;background:#fff;color:var(--rouge);border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Appeler</a>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:20px;text-align:left;">
+          <div style="font-size:26px;margin-bottom:10px;">💬</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">WhatsApp</div>
+          <div style="font-size:17px;font-weight:800;color:#fff;margin-bottom:3px;">+33 06 25 55 97 97</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px;">Message ou vocal · Réponse rapide</div>
+          <a href="https://wa.me/33625559797" target="_blank" style="display:inline-block;padding:9px 16px;background:#25D366;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">WhatsApp</a>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:20px;text-align:left;">
+          <div style="font-size:26px;margin-bottom:10px;">✉️</div>
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;">Email</div>
+          <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:3px;word-break:break-all;">ck2services.contact@gmail.com</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:14px;">Réponse sous 24h ouvrées</div>
+          <a href="mailto:ck2services.contact@gmail.com" style="display:inline-block;padding:9px 16px;background:#fff;color:var(--bleu);border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Email</a>
+        </div>
+
+      </div>
+
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:100px;padding:8px 18px;font-size:12px;color:rgba(255,255,255,0.8);">
+        <span style="width:7px;height:7px;border-radius:50%;background:#22C55E;display:inline-block;animation:blink-dot 2s infinite;"></span>
+        Service ouvert · Lundi – Vendredi 10h – 17h · Appel gratuit
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 2 — INSCRIPTION
+══════════════════════════════════════════ -->
+<div class="page" id="p-register">
+  <div class="topbar">
+    <div class="topbar-logo" onclick="aller('p-accueil')">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c2t">00:00</span>
+        <span class="clock-date" id="c2d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+  <div class="page-body">
+    <div class="auth-wrap">
+      <div class="steps-row mt24">
+        <div class="step-item">
+          <div class="step-dot active">1</div>
+          <div class="step-label">Compte</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+          <div class="step-dot">2</div>
+          <div class="step-label">Langue</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+          <div class="step-dot">3</div>
+          <div class="step-label">Situation</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+          <div class="step-dot">4</div>
+          <div class="step-label">Résumé</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+          <div class="step-dot">5</div>
+          <div class="step-label">Accès</div>
+        </div>
+      </div>
+
+      <h2 class="mt24">Créer mon dossier</h2>
+      <p class="auth-sub">Inscription gratuite — étape 1 sur 5</p>
+
+      <div class="card">
+        <div class="field">
+          <label>Prénom et nom</label>
+          <input type="text" id="reg-nom" placeholder="Mohamed Al-Rashid">
+        </div>
+        <div class="field">
+          <label>Adresse email</label>
+          <input type="email" id="reg-email" placeholder="votre@email.com">
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" id="reg-pass" placeholder="8 caractères minimum">
+        </div>
+        <div class="field">
+          <label>Confirmer</label>
+          <input type="password" placeholder="Même mot de passe">
+        </div>
+        <button class="btn btn-bleu btn-full mt8" onclick="inscrire()">Créer mon compte →</button>
+      </div>
+      <div class="auth-switch">Déjà inscrit ? <a onclick="aller('p-login')">Me connecter</a></div>
+      <div class="auth-switch mt8"><a onclick="aller('p-accueil')">← Retour à l'accueil</a></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 3 — CONNEXION
+══════════════════════════════════════════ -->
+<div class="page" id="p-login">
+  <div class="topbar">
+    <div class="topbar-logo" onclick="aller('p-accueil')">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c3t">00:00</span>
+        <span class="clock-date" id="c3d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+  <div class="page-body">
+    <div class="auth-wrap">
+      <h2 class="mt24">Se connecter</h2>
+      <p class="auth-sub">Accédez à votre dossier</p>
+      <div class="card">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" placeholder="votre@email.com">
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" placeholder="Votre mot de passe">
+        </div>
+        <button class="btn btn-bleu btn-full mt8" onclick="connecter()">Accéder à mon dossier →</button>
+      </div>
+      <div class="auth-switch">Pas encore inscrit ? <a onclick="aller('p-register')">Créer un dossier</a></div>
+      <div class="auth-switch mt8"><a onclick="aller('p-accueil')">← Retour à l'accueil</a></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 4 — LANGUE
+══════════════════════════════════════════ -->
+<div class="page" id="p-langue">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c4t">00:00</span>
+        <span class="clock-date" id="c4d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+  <div class="page-body">
+    <div class="auth-wrap">
+      <div class="steps-row mt24">
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Compte</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot active">2</div><div class="step-label">Langue</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-dot">3</div><div class="step-label">Situation</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-dot">4</div><div class="step-label">Résumé</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-dot">5</div><div class="step-label">Accès</div></div>
+      </div>
+
+      <h2 class="mt24">Votre langue</h2>
+      <p class="auth-sub">L'application s'adapte automatiquement</p>
+
+      <div class="lang-grid">
+        <div class="lang-btn active" onclick="selLang(this)"><span class="flag">🇫🇷</span><span class="nom">Français</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇸🇦</span><span class="nom">العربية</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇬🇧</span><span class="nom">English</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇪🇸</span><span class="nom">Español</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇵🇹</span><span class="nom">Português</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇷🇺</span><span class="nom">Русский</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇺🇦</span><span class="nom">Українська</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇦🇫</span><span class="nom">پښتو</span></div>
+        <div class="lang-btn" onclick="selLang(this)"><span class="flag">🇸🇴</span><span class="nom">Soomaali</span></div>
+      </div>
+      <button class="btn btn-bleu btn-full" onclick="aller('p-voice')">Continuer →</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 5 — ANALYSE VOCALE
+══════════════════════════════════════════ -->
+<div class="page" id="p-voice">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c5t">00:00</span>
+        <span class="clock-date" id="c5d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+  <div class="page-body">
+    <div class="voice-center">
+      <div class="steps-row">
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Compte</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Langue</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot active">3</div><div class="step-label">Situation</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-dot">4</div><div class="step-label">Résumé</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-dot">5</div><div class="step-label">Accès</div></div>
+      </div>
+
+      <h2 class="mt24">Décrivez votre situation</h2>
+      <p class="sub">Parlez librement ou écrivez — l'IA identifie vos démarches</p>
+
+      <div class="mic-zone">
+        <div class="mic-ring" id="micRing">
+          <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</button>
+        </div>
+        <p class="mic-hint" id="micHint">Appuyez pour parler</p>
+      </div>
+
+      <div class="or-ligne">ou écrivez votre situation</div>
+
+      <div class="card">
+        <textarea id="situTxt" placeholder="Ex. : Je suis arrivé en France il y a 3 mois avec un visa étudiant. J'ai terminé mes études et je souhaite travailler. Je viens du Maroc, j'ai 26 ans..."></textarea>
+        <button class="btn btn-bleu btn-full mt16" onclick="analyser()">Analyser ma situation →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 6 — RÉSUMÉ IA
+══════════════════════════════════════════ -->
+<div class="page" id="p-resume">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c6t">00:00</span>
+        <span class="clock-date" id="c6d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+  <div class="page-body">
+    <div class="summary-wrap">
+      <div class="steps-row">
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Compte</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Langue</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Situation</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot active">4</div><div class="step-label">Résumé</div></div>
+        <div class="step-line"></div>
+        <div class="step-item"><div class="step-dot">5</div><div class="step-label">Accès</div></div>
+      </div>
+
+      <h2 class="mt24">Votre analyse</h2>
+      <p class="sub">Ce que l'IA a identifié pour vous</p>
+
+      <!-- Chargement -->
+      <div class="ia-loading" id="iaLoading">
+        <div class="ia-spinner"></div>
+        <p>L'IA analyse votre situation…</p>
+      </div>
+
+      <!-- Résultat -->
+      <div class="summary-grid hidden" id="iaResult">
+        <div class="s-card">
+          <div class="s-label">🎯 Procédure identifiée</div>
+          <h3>Titre de séjour salarié — Première demande</h3>
+          <p>Organisme : <strong>Préfecture via portail ANEF</strong> · Délai estimé : 3 à 5 mois</p>
+        </div>
+        <div class="s-two">
+          <div class="s-card">
+            <div class="s-label">📋 Documents</div>
+            <ul class="s-list">
+              <li>Passeport valide</li>
+              <li>Justificatif domicile</li>
+              <li>Contrat de travail</li>
+              <li>3 bulletins de salaire</li>
+              <li>Photos d'identité</li>
+              <li>CERFA 15111*01</li>
+              <li>Timbre fiscal 269€</li>
+            </ul>
+          </div>
+          <div class="s-card">
+            <div class="s-label">📅 Étapes</div>
+            <ul class="s-list">
+              <li>Dépôt sur ANEF.fr</li>
+              <li>Récépissé (7 jours)</li>
+              <li>Convocation préfecture</li>
+              <li>Biométrie sur place</li>
+              <li>Remise du titre</li>
+            </ul>
+          </div>
+        </div>
+        <div class="s-card">
+          <div class="s-label">⚖️ Vos droits</div>
+          <p>Avec votre récépissé, vous avez le droit de travailler pendant toute l'instruction. En cas de refus, vous avez 2 mois pour un recours.</p>
+        </div>
+        <div class="s-alert">⚠️ <strong>Important :</strong> Ne quittez pas la France pendant l'instruction. Signalez tout changement d'adresse sous 48h.</div>
+        <button class="btn btn-bleu btn-full" onclick="aller('p-paiement')">Accéder à mon espace complet →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 7 — PAIEMENT
+══════════════════════════════════════════ -->
+<div class="page" id="p-paiement">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <div class="clock-box">
+        <span class="clock-time" id="c7t">00:00</span>
+        <span class="clock-date" id="c7d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+  <div class="page-body">
+    <div class="pay-wrap">
+      <div class="steps-row">
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Compte</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Langue</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Situation</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot done">✓</div><div class="step-label">Résumé</div></div>
+        <div class="step-line done"></div>
+        <div class="step-item"><div class="step-dot active">5</div><div class="step-label">Accès</div></div>
+      </div>
+
+      <h2 class="mt24">Choisissez votre formule</h2>
+      <p class="sub">Accès complet à votre tableau de bord</p>
+
+      <div class="plans" style="align-items:start;">
+        <div class="plan" onclick="selPlan(this)">
+          <div class="plan-name">Standard</div>
+          <div class="plan-price">19€<span>/mois</span></div>
+          <div class="plan-period">Résiliable à tout moment</div>
+          <ul class="plan-feats">
+            <li>Dossier complet</li>
+            <li>Suivi des documents</li>
+            <li>Prise de RDV préfecture</li>
+            <li>Relances automatiques 24h</li>
+            <li>Assistance par chat</li>
+          </ul>
+        </div>
+        <div class="plan chosen" onclick="selPlan(this)">
+          <div class="plan-badge">⭐ Recommandé</div>
+          <div class="plan-name">Premium</div>
+          <div class="plan-price" style="color:var(--rouge)">49€<span>/mois</span></div>
+          <div class="plan-period">Tout Standard inclus +</div>
+          <ul class="plan-feats">
+            <li>Conseiller dédié</li>
+            <li>Assistance téléphonique</li>
+            <li>Prise de RDV préfecture</li>
+            <li>Relances automatiques 24h</li>
+            <li>Assistance par chat</li>
+            <li>🗺️ Carte avocats & associations</li>
+            <li>🗺️ Carte offres d'emploi en tension</li>
+            <li>Générateur de CV</li>
+            <li>Générateur attestation de domicile</li>
+            <li>Générateur lettre de motivation</li>
+            <li>Courrier intégré</li>
+            <li>Formulaires auto (CAF, OFII, Sécu, préfecture, logement)</li>
+            <li>Générateur lettres administratives</li>
+            <li>Scanner intelligent de documents</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label>Méthode de paiement</label>
+          <div class="pay-methods">
+            <div class="pay-m chosen" onclick="selPay(this)">💳 Carte</div>
+            <div class="pay-m" onclick="selPay(this)">🍎 Apple Pay</div>
+            <div class="pay-m" onclick="selPay(this)">G Pay</div>
+            <div class="pay-m" onclick="selPay(this)">PayPal</div>
+          </div>
+        </div>
+        <div class="field"><label>Numéro de carte</label><input type="text" placeholder="1234 5678 9012 3456"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field"><label>Expiration</label><input type="text" placeholder="MM/AA"></div>
+          <div class="field"><label>CVV</label><input type="text" placeholder="123"></div>
+        </div>
+        <button class="btn btn-bleu btn-full" onclick="aller('p-dashboard');initDash()">Accéder à mon tableau de bord →</button>
+        <p class="pay-secure mt8">🔒 Paiement sécurisé · RGPD · Annulable à tout moment</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     PAGE 8 — DASHBOARD
+══════════════════════════════════════════ -->
+<div class="page" id="p-dashboard">
+  <!-- Topbar globale -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-mark">🏛️</div>
+      Admin<span>Pocket</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-gen" onclick="ouvrirTiroir()" title="Générateurs AdminPocket">
+        🏛️
+        <span class="btn-gen-dot"></span>
+      </button>
+      <button class="tb-btn tb-btn-ghost" onclick="readPage()">🔊</button>
+      <div class="clock-box">
+        <span class="clock-time" id="c8t">00:00</span>
+        <span class="clock-date" id="c8d">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="tricolore"></div>
+
+  <!-- Layout sidebar + contenu -->
+  <div class="dash-layout">
+
+    <!-- Sidebar -->
+    <nav class="dash-sidebar">
+      <div class="ds-section">Mon dossier</div>
+      <button class="ds-item on"  onclick="dTab('overview',this)"><span class="ds-icon">🏠</span>Vue d'ensemble</button>
+      <button class="ds-item"     onclick="dTab('docs',this)"><span class="ds-icon">📁</span>Documents<span class="ds-badge">2</span></button>
+      <button class="ds-item"     onclick="dTab('etapes',this)"><span class="ds-icon">📋</span>Étapes</button>
+      <button class="ds-item"     onclick="dTab('messages',this)"><span class="ds-icon">💬</span>Messages<span class="ds-badge">2</span></button>
+      <button class="ds-item"     onclick="dTab('rdv',this)"><span class="ds-icon">🗓️</span>Rendez-vous</button>
+
+      <div class="ds-section">Services</div>
+      <button class="ds-item"     onclick="dTab('carte',this)"><span class="ds-icon">🗺️</span>Carte avocats & asso.</button>
+      <button class="ds-item"     onclick="dTab('emploi',this)"><span class="ds-icon">💼</span>Carte emploi en tension</button>
+      <button class="ds-item"     onclick="dTab('cv',this)"><span class="ds-icon">📄</span>Générateur de CV</button>
+      <button class="ds-item"     onclick="dTab('attestation',this)"><span class="ds-icon">🏠</span>Attestation domicile</button>
+      <button class="ds-item"     onclick="dTab('lettre',this)"><span class="ds-icon">✉️</span>Lettre de motivation</button>
+      <button class="ds-item"     onclick="dTab('formulaires',this)"><span class="ds-icon">📋</span>Formulaires auto</button>
+      <button class="ds-item"     onclick="dTab('lettreadmin',this)"><span class="ds-icon">📝</span>Lettres administratives</button>
+      <button class="ds-item"     onclick="dTab('convertisseur',this)"><span class="ds-icon">🔄</span>Convertisseur docs</button>
+      <button class="ds-item"     onclick="dTab('scanner',this)"><span class="ds-icon">📸</span>Scanner documents</button>
+      <button class="ds-item"     onclick="dTab('quiz',this)"><span class="ds-icon">🇫🇷</span>Quiz civique</button>
+
+      <div class="ds-section">Compte</div>
+      <button class="ds-item"     onclick="dTab('params',this)"><span class="ds-icon">⚙️</span>Paramètres</button>
+
+      <div class="ds-user">
+        <div class="ds-user-row">
+          <div class="ds-avatar" id="dsAv">M</div>
+          <div>
+            <div class="ds-user-name" id="dsNm">Mohamed</div>
+            <div class="ds-user-plan">⭐ Premium</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Contenu principal -->
+    <div class="dash-main">
+      <div class="dash-bar">
+        <h1 id="dashTitle">Vue d'ensemble</h1>
+        <div class="dash-sub" id="dashSub">Titre de séjour · Première demande · AV-2026-7834</div>
+      </div>
+      <div class="dash-content">
+
+        <!-- ── VUE D'ENSEMBLE ── -->
+        <div class="dash-tab on" id="dt-overview">
+          <div class="alerte amber">
+            <span class="alerte-icon">⚠️</span>
+            <div class="alerte-body">
+              <strong>2 documents manquants</strong>
+              Relance automatique dans 18h · RDV dans 15 jours
+            </div>
+            <button class="alerte-action" onclick="dTab('docs',null)">Compléter</button>
+          </div>
+
+          <div class="phone-strip">
+            <div class="phone-left">
+              <div class="phone-dot"></div>
+              <div class="phone-info">
+                <strong>Assistance disponible</strong>
+                <span>9h30 – 16h30 · 01 23 45 67 89</span>
+              </div>
+            </div>
+            <button class="phone-btn">📞 Appeler</button>
+          </div>
+
+          <div class="kpi-row">
+            <div class="kpi"><div class="kpi-label">Documents</div><div class="kpi-val bleu">6/9</div><div class="kpi-sub">3 manquants</div></div>
+            <div class="kpi"><div class="kpi-label">Étapes</div><div class="kpi-val vert">3/5</div><div class="kpi-sub">complétées</div></div>
+            <div class="kpi"><div class="kpi-label">Prochain RDV</div><div class="kpi-val bleu" style="font-size:20px;">24 juin</div><div class="kpi-sub">10h30 · Paris</div></div>
+            <div class="kpi"><div class="kpi-label">Délai estimé</div><div class="kpi-val bleu" style="font-size:20px;">4 mois</div><div class="kpi-sub">pour le titre</div></div>
+          </div>
+
+          <div class="prog-card">
+            <div class="prog-card-top">
+              <div>
+                <h3>Progression du dossier</h3>
+                <div class="txt-gris mt8">Préfecture de Paris · ANEF-826-4431</div>
+              </div>
+              <div class="prog-pct">67%</div>
+            </div>
+            <div class="prog-track"><div class="prog-fill" id="pBar" style="width:0%"></div></div>
+            <div class="prog-row"><span>Dépôt</span><span>En cours</span><span>Titre remis</span></div>
+          </div>
+
+          <div class="g2">
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <div style="font-size:14px;font-weight:700;color:var(--bleu);">Documents récents</div>
+                <span class="txt-gris" style="cursor:pointer;font-size:12px;" onclick="dTab('docs',null)">Voir tout →</span>
+              </div>
+              <ul class="doc-list">
+                <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Passeport</span><span class="chip chip-vert">OK</span></li>
+                <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Justificatif domicile</span><span class="chip chip-vert">OK</span></li>
+                <li class="doc-row"><div class="doc-cb"></div><span class="doc-txt">Photos d'identité</span><span class="chip chip-rouge">Manquant</span></li>
+                <li class="doc-row"><div class="doc-cb"></div><span class="doc-txt">Formulaire CERFA</span><span class="chip chip-rouge">Manquant</span></li>
+              </ul>
+            </div>
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <div style="font-size:14px;font-weight:700;color:var(--bleu);">Messages</div>
+                <span class="txt-gris" style="cursor:pointer;font-size:12px;" onclick="dTab('messages',null)">Voir tout →</span>
+              </div>
+              <div class="msg-list">
+                <div class="msg unread">
+                  <div class="msg-av">👩‍💼</div>
+                  <div class="msg-body">
+                    <div class="msg-top"><span class="msg-name">Sarah</span><span class="msg-new">Nouveau</span><span class="msg-time">11h32</span></div>
+                    <div class="msg-text">Il manque vos photos et le CERFA avant le 20 juin.</div>
+                  </div>
+                </div>
+                <div class="msg unread">
+                  <div class="msg-av">🤖</div>
+                  <div class="msg-body">
+                    <div class="msg-top"><span class="msg-name">IA</span><span class="msg-new">Nouveau</span><span class="msg-time">Hier</span></div>
+                    <div class="msg-text">RDV dans 15 jours — préparez vos documents.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── DOCUMENTS ── -->
+        <div class="dash-tab" id="dt-docs">
+          <div class="section-title">📁 Mes documents</div>
+          <div class="section-sub">6 fournis · 2 urgents manquants · 1 à faire</div>
+          <div class="prog-track mb16"><div class="prog-fill" style="width:67%"></div></div>
+          <div class="card">
+            <ul class="doc-list">
+              <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Passeport valide (toutes les pages)</span><span class="chip chip-vert">OK</span></li>
+              <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Visa ou titre précédent</span><span class="chip chip-vert">OK</span></li>
+              <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Justificatif de domicile (moins de 3 mois)</span><span class="chip chip-vert">OK</span></li>
+              <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Contrat de travail signé</span><span class="chip chip-vert">OK</span></li>
+              <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">3 bulletins de salaire</span><span class="chip chip-vert">OK</span></li>
+              <li class="doc-row"><div class="doc-cb ok">✓</div><span class="doc-txt ok">Acte de naissance traduit</span><span class="chip chip-vert">OK</span></li>
+              <li class="doc-row"><div class="doc-cb"></div><span class="doc-txt">3 photos d'identité format réglementaire</span><span class="chip chip-rouge">Manquant</span><button class="doc-up">⬆</button></li>
+              <li class="doc-row"><div class="doc-cb"></div><span class="doc-txt">Formulaire CERFA 15111*01 signé</span><span class="chip chip-rouge">Manquant</span><button class="doc-up">⬆</button></li>
+              <li class="doc-row"><div class="doc-cb"></div><span class="doc-txt">Timbre fiscal 269€</span><span class="chip chip-amber">À faire</span><button class="doc-up">🔗</button></li>
+            </ul>
+            <button class="btn btn-bleu mt16" style="height:40px;padding:0 20px;font-size:13px;">⬆ Ajouter un document</button>
+          </div>
+        </div>
+
+        <!-- ── ÉTAPES ── -->
+        <div class="dash-tab" id="dt-etapes">
+          <div class="section-title">📋 Mes étapes</div>
+          <div class="section-sub">3 complétées · 1 en cours · 1 à venir</div>
+          <div class="card">
+            <div class="timeline">
+              <div class="tl done">
+                <div class="tl-spine"><div class="tl-dot done">✓</div></div>
+                <div class="tl-body">
+                  <div class="tl-name">Dépôt du dossier sur ANEF</div>
+                  <div class="tl-desc">Dossier soumis et confirmation reçue par email.</div>
+                  <div class="tl-date">15 mai 2026 · Réf. ANEF-826-4431</div>
+                </div>
+              </div>
+              <div class="tl done">
+                <div class="tl-spine"><div class="tl-dot done">✓</div></div>
+                <div class="tl-body">
+                  <div class="tl-name">Récépissé reçu</div>
+                  <div class="tl-desc">Autorise à rester et travailler pendant toute l'instruction.</div>
+                  <div class="tl-date">20 mai 2026 · Valable 3 mois</div>
+                </div>
+              </div>
+              <div class="tl done">
+                <div class="tl-spine"><div class="tl-dot done">✓</div></div>
+                <div class="tl-body">
+                  <div class="tl-name">Rendez-vous préfecture confirmé</div>
+                  <div class="tl-desc">Convocation reçue pour vérification biométrique.</div>
+                  <div class="tl-date">RDV le 24 juin 2026 à 10h30</div>
+                </div>
+              </div>
+              <div class="tl now">
+                <div class="tl-spine"><div class="tl-dot now">→</div></div>
+                <div class="tl-body">
+                  <div class="tl-name now">Compléter les documents manquants</div>
+                  <div class="tl-desc">2 pièces à fournir avant le 20 juin pour votre RDV.</div>
+                  <div class="tl-date">Action requise maintenant</div>
+                </div>
+              </div>
+              <div class="tl">
+                <div class="tl-spine"><div class="tl-dot wait">5</div></div>
+                <div class="tl-body">
+                  <div class="tl-name">Remise du titre de séjour</div>
+                  <div class="tl-desc">Après instruction par la préfecture. Délai moyen 3 à 5 mois.</div>
+                  <div class="tl-date">Estimé : août – octobre 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── MESSAGES ── -->
+        <div class="dash-tab" id="dt-messages">
+          <div class="section-title">💬 Messages</div>
+          <div class="section-sub">2 messages non lus · Conseillère Sarah</div>
+          <div class="card">
+            <div class="msg-list">
+              <div class="msg unread">
+                <div class="msg-av">👩‍💼</div>
+                <div class="msg-body">
+                  <div class="msg-top"><span class="msg-name">Conseillère Sarah</span><span class="msg-new">Nouveau</span><span class="msg-time">09 juin · 11h32</span></div>
+                  <div class="msg-text">Bonjour, votre dossier avance bien. Il manque encore vos 3 photos d'identité réglementaires et le formulaire CERFA 15111*01. Merci de les déposer avant le 20 juin.</div>
+                </div>
+              </div>
+              <div class="msg unread">
+                <div class="msg-av">🤖</div>
+                <div class="msg-body">
+                  <div class="msg-top"><span class="msg-name">AdminPocket IA</span><span class="msg-new">Nouveau</span><span class="msg-time">08 juin · 18h00</span></div>
+                  <div class="msg-text">Rappel : votre rendez-vous est dans 15 jours. Préparez tous vos originaux + copies. La liste est dans l'onglet Documents.</div>
+                </div>
+              </div>
+              <div class="msg">
+                <div class="msg-av">👩‍💼</div>
+                <div class="msg-body">
+                  <div class="msg-top"><span class="msg-name">Conseillère Sarah</span><span class="msg-time">20 mai · 14h15</span></div>
+                  <div class="msg-text">Votre récépissé est reçu. Conservez-le avec votre passeport en permanence.</div>
+                </div>
+              </div>
+            </div>
+            <div class="compose">
+              <input type="text" placeholder="Écrire à votre conseillère...">
+              <button>Envoyer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── RDV ── -->
+        <div class="dash-tab" id="dt-rdv">
+          <div class="section-title">🗓️ Rendez-vous</div>
+          <div class="section-sub">Prochain RDV confirmé · Préfecture de Paris</div>
+          <div class="rdv-card">
+            <div class="rdv-top">
+              <h3>Préfecture de Paris</h3>
+              <span class="chip chip-vert">✅ Confirmé</span>
+            </div>
+            <div class="rdv-fields">
+              <div class="rdv-f"><label>Date & heure</label><p>Mardi 24 juin 2026 · 10h30</p></div>
+              <div class="rdv-f"><label>Adresse</label><p>17 Bd Morland, Paris 4e</p></div>
+              <div class="rdv-f"><label>Motif</label><p>Première demande titre de séjour</p></div>
+              <div class="rdv-f"><label>Numéro RDV</label><p class="code">RDV-2026-PAR-7321</p></div>
+              <div class="rdv-f"><label>Téléphone</label><p>01 82 52 42 60</p></div>
+              <div class="rdv-f"><label>Dossier</label><p class="code">AV-2026-7834</p></div>
+            </div>
+            <div class="rdv-note">📌 Apportez tous vos originaux + photocopies + 3 photos d'identité. Arrivez 15 min en avance.</div>
+          </div>
+          <div class="card">
+            <div style="font-size:15px;font-weight:700;color:var(--bleu);margin-bottom:16px;">Prendre un nouveau rendez-vous</div>
+            <div class="field"><label>Préfecture</label>
+              <select><option>Paris (75)</option><option>Marseille (13)</option><option>Lyon (69)</option><option>Toulouse (31)</option><option>Bordeaux (33)</option><option>Lille (59)</option></select>
+            </div>
+            <div class="field"><label>Date souhaitée</label><input type="date"></div>
+            <button class="btn btn-bleu" style="height:42px;font-size:14px;">Rechercher des créneaux</button>
+          </div>
+        </div>
+
+        <!-- ── CARTE AVOCATS & ASSOCIATIONS ── -->
+        <div class="dash-tab" id="dt-carte">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div class="section-title">🗺️ Carte des ressources</div>
+              <div class="section-sub">Avocats en droit des étrangers · Associations d'aide · France entière</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="map-btn on" onclick="mFilter('all',this)" id="mf-all">Tout afficher</button>
+              <button class="map-btn" onclick="mFilter('avocat',this)" id="mf-avocat">⚖️ Avocats (10)</button>
+              <button class="map-btn" onclick="mFilter('assoc',this)" id="mf-assoc">🤝 Associations (10)</button>
+            </div>
+          </div>
+
+          <!-- Stats rapides -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+            <div class="card" style="text-align:center;padding:16px;">
+              <div style="font-size:28px;font-weight:800;color:var(--bleu);">10</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Avocats droit étranger</div>
+            </div>
+            <div class="card" style="text-align:center;padding:16px;">
+              <div style="font-size:28px;font-weight:800;color:#15803D;">10</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Associations d'aide</div>
+            </div>
+            <div class="card" style="text-align:center;padding:16px;">
+              <div style="font-size:28px;font-weight:800;color:var(--rouge);">20</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Ressources en France</div>
+            </div>
+          </div>
+
+          <div class="map-shell">
+            <div id="mapbox"></div>
+            <div class="map-leg">
+              <div class="map-leg-title">Légende</div>
+              <div class="ml"><div class="ml-dot" style="background:#1D4ED8"></div>Avocat droit étranger</div>
+              <div class="ml"><div class="ml-dot" style="background:#15803D"></div>Association d'aide</div>
+              <div style="font-size:10px;color:var(--gris);margin-top:10px;line-height:1.5;">Cliquez sur un marqueur<br>pour voir les détails</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── CARTE EMPLOI ── -->
+        <div class="dash-tab" id="dt-emploi">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div class="section-title">💼 Carte emploi en tension</div>
+              <div class="section-sub">Entreprises qui recrutent partout en France · Secteurs prioritaires</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="map-btn on" onclick="mFilterEmploi('all',this)">Tout afficher</button>
+              <button class="map-btn" onclick="mFilterEmploi('btp',this)">🏗️ BTP</button>
+              <button class="map-btn" onclick="mFilterEmploi('resto',this)">🍽️ Restauration</button>
+              <button class="map-btn" onclick="mFilterEmploi('logistique',this)">🚚 Logistique</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div class="card" style="text-align:center;padding:14px;">
+              <div style="font-size:22px;font-weight:800;color:var(--bleu);">8</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Employeurs repérés</div>
+            </div>
+            <div class="card" style="text-align:center;padding:14px;">
+              <div style="font-size:22px;font-weight:800;color:#15803D;">CDI</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Contrats disponibles</div>
+            </div>
+            <div class="card" style="text-align:center;padding:14px;">
+              <div style="font-size:22px;font-weight:800;color:var(--rouge);">6</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Villes couvertes</div>
+            </div>
+            <div class="card" style="text-align:center;padding:14px;">
+              <div style="font-size:22px;font-weight:800;color:#B45309;">+12k</div>
+              <div style="font-size:11px;color:var(--gris);margin-top:2px;">Postes en tension</div>
+            </div>
+          </div>
+
+          <div class="map-shell">
+            <div id="mapbox-emploi"></div>
+            <div class="map-leg">
+              <div class="map-leg-title">Secteurs</div>
+              <div class="ml"><div class="ml-dot" style="background:#D97706"></div>BTP & Construction</div>
+              <div class="ml"><div class="ml-dot" style="background:#DC2626"></div>Restauration</div>
+              <div class="ml"><div class="ml-dot" style="background:#7C3AED"></div>Logistique</div>
+              <div class="ml"><div class="ml-dot" style="background:#0891B2"></div>Aide à la personne</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── EMPLOI ── -->
+        <div class="dash-tab" id="dt-emploi">
+          <div class="section-title">💼 Offres d'emploi</div>
+          <div class="section-sub">Secteurs en tension en France · Adapté à votre profil</div>
+          <div class="emploi-grid">
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🏗️</div><div><div class="ec-name">BTP & Construction</div><div class="ec-loc">Île-de-France · +12 000 postes</div></div><span class="chip chip-vert" style="margin-left:auto;">Fort besoin</span></div><div class="ec-desc">Maçon, électricien, plombier, carreleur. CDI disponibles. Expérience valorisée.</div></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🍽️</div><div><div class="ec-name">Restauration & Hôtellerie</div><div class="ec-loc">Toute la France</div></div><span class="chip chip-vert" style="margin-left:auto;">Fort besoin</span></div><div class="ec-desc">Commis, plongeur, réceptionniste. CDI fréquents. Logement parfois fourni.</div></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🚚</div><div><div class="ec-name">Transport & Logistique</div><div class="ec-loc">National</div></div><span class="chip chip-vert" style="margin-left:auto;">Fort besoin</span></div><div class="ec-desc">Livreur, cariste, préparateur. Permis B souvent suffisant.</div></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">👴</div><div><div class="ec-name">Aide à domicile</div><div class="ec-loc">Partout en France</div></div><span class="chip chip-vert" style="margin-left:auto;">Fort besoin</span></div><div class="ec-desc">Auxiliaire de vie, aide-soignant. Formation possible sur le terrain.</div></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🧹</div><div><div class="ec-name">Nettoyage & Propreté</div><div class="ec-loc">Grandes villes</div></div><span class="chip chip-amber" style="margin-left:auto;">Moyen</span></div><div class="ec-desc">Agent d'entretien. Horaires tôt le matin. CDI courants.</div></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🌾</div><div><div class="ec-name">Agriculture</div><div class="ec-loc">Sud de la France</div></div><span class="chip chip-amber" style="margin-left:auto;">Saisonnier</span></div><div class="ec-desc">Cueillette, vendange. Logement souvent fourni. Contrats 3–6 mois.</div></div>
+          </div>
+        </div>
+
+        <!-- ── CV ── -->
+        <div class="dash-tab" id="dt-cv">
+          <div class="section-title">📄 Mon CV</div>
+          <div class="section-sub">Remplissez vos infos · L'IA génère un CV PDF prêt à l'emploi</div>
+          <div class="cv-wrap">
+            <div class="card">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="field"><label>Prénom</label><input type="text" placeholder="Mohamed"></div>
+                <div class="field"><label>Nom</label><input type="text" placeholder="Al-Rashid"></div>
+              </div>
+              <div class="field"><label>Métier visé</label><input type="text" placeholder="Ex. : Maçon, Cuisinier, Livreur…"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="field"><label>Email</label><input type="email" placeholder="votre@email.com"></div>
+                <div class="field"><label>Téléphone</label><input type="tel" placeholder="06 00 00 00 00"></div>
+              </div>
+              <div class="field"><label>Expériences</label><textarea placeholder="Ex. : 3 ans maçon au Maroc, chantiers résidentiels…"></textarea></div>
+              <div class="field"><label>Compétences</label><input type="text" placeholder="Maçonnerie, béton, carrelage…"></div>
+              <div class="field"><label>Langues</label><input type="text" placeholder="Français B2 · Arabe natif · Anglais A2"></div>
+              <button class="btn btn-bleu btn-full mt8">✨ Générer mon CV</button>
+            </div>
+            <div class="cv-preview">
+              <div class="cv-prev-icon">📄</div>
+              <div class="cv-prev-txt">Votre CV apparaîtra ici<br>Format PDF · Prêt à envoyer</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── QUIZ ── -->
+        <div class="dash-tab" id="dt-quiz">
+          <div class="section-title">🇫🇷 Quiz civique</div>
+          <div class="section-sub">Préparez votre formation OFII · Valeurs et institutions françaises</div>
+          <div class="quiz-card">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gris);margin-bottom:8px;">
+              <span>Question 1 / 10</span>
+              <span style="color:var(--bleu);font-weight:700;" id="qScore">Score : 0 / 0</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill" style="width:10%"></div></div>
+            <div class="quiz-q">Quelle est la devise officielle de la République française ?</div>
+            <div class="quiz-opts" id="qOpts">
+              <button class="qo" onclick="qAnswer(this,false)">🅐 Égalité, Fraternité, Justice</button>
+              <button class="qo" onclick="qAnswer(this,true)">🅑 Liberté, Égalité, Fraternité</button>
+              <button class="qo" onclick="qAnswer(this,false)">🅒 Unité, Laïcité, Solidarité</button>
+              <button class="qo" onclick="qAnswer(this,false)">🅓 Travail, Famille, Patrie</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PARAMÈTRES ── -->
+        <div class="dash-tab" id="dt-params">
+          <div class="section-title">⚙️ Paramètres</div>
+          <div class="section-sub">Gérez votre profil et vos préférences</div>
+          <div class="settings-grid">
+            <div class="card">
+              <div style="font-size:15px;font-weight:700;color:var(--bleu);margin-bottom:16px;">Mon profil</div>
+              <div class="field"><label>Prénom et nom</label><input type="text" value="Mohamed Al-Rashid"></div>
+              <div class="field"><label>Email</label><input type="email" value="mohamed@email.com"></div>
+              <div class="field"><label>Téléphone</label><input type="tel" placeholder="+33 6 00 00 00 00"></div>
+              <div class="field"><label>Langue</label>
+                <select><option>🇫🇷 Français</option><option>🇸🇦 Arabe</option><option>🇬🇧 English</option><option>🇪🇸 Español</option></select>
+              </div>
+              <button class="btn btn-bleu" style="height:42px;font-size:14px;">Enregistrer</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="card">
+                <div style="font-size:15px;font-weight:700;color:var(--bleu);margin-bottom:14px;">Notifications</div>
+                <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
+                  <label style="display:flex;justify-content:space-between;cursor:pointer;align-items:center;">Relances documents 24h<input type="checkbox" checked style="accent-color:var(--bleu);width:16px;height:16px;"></label>
+                  <label style="display:flex;justify-content:space-between;cursor:pointer;align-items:center;">Rappels rendez-vous<input type="checkbox" checked style="accent-color:var(--bleu);width:16px;height:16px;"></label>
+                  <label style="display:flex;justify-content:space-between;cursor:pointer;align-items:center;">Messages conseillère<input type="checkbox" checked style="accent-color:var(--bleu);width:16px;height:16px;"></label>
+                </div>
+              </div>
+              <div class="card">
+                <div style="font-size:15px;font-weight:700;color:var(--bleu);margin-bottom:12px;">Mon abonnement</div>
+                <div style="font-size:22px;font-weight:800;color:var(--rouge);margin-bottom:4px;">49€<span style="font-size:13px;font-weight:400;color:var(--gris);">/mois</span></div>
+                <div style="font-size:12px;color:var(--gris);margin-bottom:14px;">⭐ Premium · Renouvellement 9 juil. 2026</div>
+                <button class="btn btn-outline" style="height:38px;font-size:13px;">Gérer l'abonnement</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ATTESTATION DOMICILE ── -->
+        <div class="dash-tab" id="dt-attestation">
+          <div class="section-title">🏠 Attestation de domicile</div>
+          <div class="section-sub">Générez une attestation officielle en 1 clic</div>
+          <div class="card" style="max-width:560px;">
+            <div class="field"><label>Nom complet</label><input type="text" placeholder="Mohamed Al-Rashid"></div>
+            <div class="field"><label>Adresse complète</label><input type="text" placeholder="12 rue de la Paix, 75001 Paris"></div>
+            <div class="field"><label>Date d'entrée dans le logement</label><input type="date"></div>
+            <div class="field"><label>Type de logement</label>
+              <select><option>Locataire</option><option>Propriétaire</option><option>Hébergé chez un tiers</option></select>
+            </div>
+            <div class="field"><label>Nom de l'hébergeur (si hébergé)</label><input type="text" placeholder="Laissez vide si non applicable"></div>
+            <button class="btn btn-bleu btn-full mt8">📄 Générer l'attestation PDF</button>
+          </div>
+        </div>
+
+        <!-- ── LETTRE DE MOTIVATION ── -->
+        <div class="dash-tab" id="dt-lettre">
+          <div class="section-title">✉️ Lettre de motivation</div>
+          <div class="section-sub">Générez une lettre personnalisée pour votre candidature</div>
+          <div class="g2">
+            <div class="card">
+              <div class="field"><label>Votre prénom et nom</label><input type="text" placeholder="Mohamed Al-Rashid"></div>
+              <div class="field"><label>Poste visé</label><input type="text" placeholder="Ex. : Maçon, Cuisinier, Livreur…"></div>
+              <div class="field"><label>Nom de l'entreprise</label><input type="text" placeholder="Vinci Construction"></div>
+              <div class="field"><label>Vos points forts</label><textarea placeholder="Ex. : 3 ans d'expérience en BTP, sérieux, ponctuel, motivé…"></textarea></div>
+              <div class="field"><label>Langue de la lettre</label>
+                <select><option>Français</option><option>Anglais</option><option>Espagnol</option></select>
+              </div>
+              <button class="btn btn-bleu btn-full mt8">✨ Générer la lettre</button>
+            </div>
+            <div class="card" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;min-height:320px;">
+              <div style="font-size:48px;opacity:.2">✉️</div>
+              <div style="font-size:13px;color:var(--gris);text-align:center;line-height:1.7">Votre lettre apparaîtra ici<br>Format PDF · Prête à envoyer</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── FORMULAIRES AUTO ── -->
+        <div class="dash-tab" id="dt-formulaires">
+          <div class="section-title">📋 Formulaires automatiques</div>
+          <div class="section-sub">L'app remplit automatiquement vos formulaires officiels</div>
+          <div class="emploi-grid">
+            <div class="ec"><div class="ec-top"><div class="ec-icon">👨‍👩‍👧</div><div><div class="ec-name">Formulaire CAF</div><div class="ec-loc">Allocations familiales</div></div></div><div class="ec-desc">RSA, APL, allocations — pré-rempli avec vos informations enregistrées.</div><button class="btn btn-bleu mt16" style="height:38px;font-size:13px;padding:0 16px;">Générer →</button></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🏥</div><div><div class="ec-name">Formulaire OFII</div><div class="ec-loc">Intégration républicaine</div></div></div><div class="ec-desc">Contrat d'Intégration Républicaine, visite médicale, formation.</div><button class="btn btn-bleu mt16" style="height:38px;font-size:13px;padding:0 16px;">Générer →</button></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🏦</div><div><div class="ec-name">Sécurité sociale</div><div class="ec-loc">Affiliation & carte vitale</div></div></div><div class="ec-desc">Demande d'affiliation à l'assurance maladie, carte vitale.</div><button class="btn btn-bleu mt16" style="height:38px;font-size:13px;padding:0 16px;">Générer →</button></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🏛️</div><div><div class="ec-name">Formulaire Préfecture</div><div class="ec-loc">CERFA 15111*01 et autres</div></div></div><div class="ec-desc">Titre de séjour, renouvellement — CERFA pré-rempli avec vos données.</div><button class="btn btn-bleu mt16" style="height:38px;font-size:13px;padding:0 16px;">Générer →</button></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">🏠</div><div><div class="ec-name">Formulaire Logement</div><div class="ec-loc">HLM, DAL, DALO</div></div></div><div class="ec-desc">Demande de logement social, recours DALO, dossier HLM.</div><button class="btn btn-bleu mt16" style="height:38px;font-size:13px;padding:0 16px;">Générer →</button></div>
+            <div class="ec"><div class="ec-top"><div class="ec-icon">📝</div><div><div class="ec-name">Autres formulaires</div><div class="ec-loc">Sur demande</div></div></div><div class="ec-desc">Tout autre formulaire officiel — demandez à votre conseiller.</div><button class="btn btn-outline mt16" style="height:38px;font-size:13px;padding:0 16px;">Demander →</button></div>
+          </div>
+        </div>
+
+        <!-- ── LETTRES ADMINISTRATIVES ── -->
+        <div class="dash-tab" id="dt-lettreadmin">
+          <div class="section-title">📝 Lettres administratives</div>
+          <div class="section-sub">Générez tout type de courrier officiel en quelques secondes</div>
+          <div class="g2">
+            <div class="card">
+              <div class="field"><label>Type de lettre</label>
+                <select><option>Recours gracieux</option><option>Demande de délai</option><option>Contestation de décision</option><option>Demande de rendez-vous</option><option>Lettre de réclamation</option><option>Demande d'information</option><option>Autre</option></select>
+              </div>
+              <div class="field"><label>Destinataire</label><input type="text" placeholder="Ex. : Préfecture de Paris, CAF de Paris…"></div>
+              <div class="field"><label>Objet de la lettre</label><input type="text" placeholder="Ex. : Recours contre refus de titre de séjour"></div>
+              <div class="field"><label>Détails de votre situation</label><textarea placeholder="Expliquez votre situation en quelques phrases…"></textarea></div>
+              <div class="field"><label>Langue</label>
+                <select><option>Français</option><option>Anglais</option><option>Arabe</option><option>Espagnol</option></select>
+              </div>
+              <button class="btn btn-bleu btn-full mt8">📄 Générer la lettre</button>
+            </div>
+            <div class="card" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;min-height:320px;">
+              <div style="font-size:48px;opacity:.2">📝</div>
+              <div style="font-size:13px;color:var(--gris);text-align:center;line-height:1.7">Votre lettre apparaîtra ici<br>Prête à imprimer et envoyer</div>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── CONVERTISSEUR DE DOCUMENTS ── -->
+        <div class="dash-tab" id="dt-convertisseur">
+          <div class="section-title">🔄 Convertisseur de documents</div>
+          <div class="section-sub">Convertissez vos fichiers en quelques secondes — Word, PDF, JPG, PNG et plus</div>
+
+          <div class="g2" style="align-items:start;">
+
+            <!-- Colonne gauche : upload + choix format -->
+            <div style="display:flex;flex-direction:column;gap:14px;">
+
+              <!-- Zone de dépôt -->
+              <div class="card" style="padding:20px;">
+                <div style="font-size:14px;font-weight:700;color:var(--bleu);margin-bottom:14px;">① Importez votre fichier</div>
+                <div class="conv-drop-zone" id="convDropZone"
+                     ondragover="convDragOver(event)"
+                     ondragleave="convDragLeave(event)"
+                     ondrop="convDrop(event)">
+                  <input type="file" class="conv-drop-input" id="convFileInput"
+                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.odt,.xls,.xlsx,.ppt,.pptx"
+                         onchange="convFileSelected(this)">
+                  <div class="conv-drop-icon">📂</div>
+                  <div class="conv-drop-title">Glissez votre fichier ici</div>
+                  <div class="conv-drop-sub">ou cliquez pour parcourir<br>PDF · Word · Excel · PowerPoint · JPG · PNG · TXT</div>
+                </div>
+
+                <!-- Fichier sélectionné (caché par défaut) -->
+                <div id="convFileCard" style="display:none;">
+                  <div class="conv-file-card">
+                    <div class="conv-file-icon" id="convFileIcon">📄</div>
+                    <div>
+                      <div class="conv-file-name" id="convFileName">document.pdf</div>
+                      <div class="conv-file-size" id="convFileSize">—</div>
+                    </div>
+                    <button class="conv-file-remove" onclick="convReset()">✕</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Choix du format cible -->
+              <div class="card" style="padding:20px;" id="convFormatSection">
+                <div style="font-size:14px;font-weight:700;color:var(--bleu);margin-bottom:14px;">② Choisissez le format de sortie</div>
+                <div class="conv-formats" id="convFormats">
+                  <!-- Rempli dynamiquement selon le fichier source -->
+                  <div style="font-size:13px;color:var(--gris);">Importez d'abord un fichier pour voir les formats disponibles.</div>
+                </div>
+              </div>
+
+              <!-- Bouton convertir -->
+              <button class="btn btn-bleu btn-full" id="convBtn" onclick="convLancer()" style="display:none;">
+                🔄 Convertir maintenant
+              </button>
+
+              <!-- Progression -->
+              <div id="convProgWrap" style="display:none;" class="card" style="padding:20px;">
+                <div style="font-size:13px;font-weight:600;color:var(--bleu);margin-bottom:8px;" id="convProgLabel">Conversion en cours…</div>
+                <div class="conv-progress-bar"><div class="conv-progress-fill" id="convProgFill"></div></div>
+              </div>
+
+              <!-- Résultat -->
+              <div id="convResult" style="display:none;" class="card" style="padding:20px;">
+                <div style="font-size:14px;font-weight:700;color:#15803D;margin-bottom:12px;">✅ Conversion terminée !</div>
+                <div class="conv-result">
+                  <div class="conv-result-icon" id="convResultIcon">📄</div>
+                  <div class="conv-result-info">
+                    <div class="conv-result-name" id="convResultName">—</div>
+                    <div class="conv-result-sub" id="convResultSub">—</div>
+                  </div>
+                  <button class="btn btn-bleu" style="height:38px;font-size:13px;padding:0 16px;" onclick="convTelecharger()">⬇ Télécharger</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne droite : guide + historique -->
+            <div style="display:flex;flex-direction:column;gap:14px;">
+
+              <!-- Formats supportés -->
+              <div class="card" style="padding:20px;">
+                <div style="font-size:14px;font-weight:700;color:var(--bleu);margin-bottom:16px;">Conversions disponibles</div>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+
+                  <div style="padding:12px 14px;background:var(--fond);border-radius:10px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Documents</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
+                      <span style="padding:3px 8px;background:#EFF6FF;border-radius:6px;color:var(--bleu);">Word → PDF</span>
+                      <span style="padding:3px 8px;background:#EFF6FF;border-radius:6px;color:var(--bleu);">PDF → Word</span>
+                      <span style="padding:3px 8px;background:#EFF6FF;border-radius:6px;color:var(--bleu);">PDF → TXT</span>
+                      <span style="padding:3px 8px;background:#EFF6FF;border-radius:6px;color:var(--bleu);">TXT → PDF</span>
+                    </div>
+                  </div>
+
+                  <div style="padding:12px 14px;background:var(--fond);border-radius:10px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Images</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
+                      <span style="padding:3px 8px;background:#F0FDF4;border-radius:6px;color:#15803D;">JPG → PDF</span>
+                      <span style="padding:3px 8px;background:#F0FDF4;border-radius:6px;color:#15803D;">PNG → PDF</span>
+                      <span style="padding:3px 8px;background:#F0FDF4;border-radius:6px;color:#15803D;">PDF → JPG</span>
+                      <span style="padding:3px 8px;background:#F0FDF4;border-radius:6px;color:#15803D;">PNG → JPG</span>
+                      <span style="padding:3px 8px;background:#F0FDF4;border-radius:6px;color:#15803D;">JPG → PNG</span>
+                    </div>
+                  </div>
+
+                  <div style="padding:12px 14px;background:var(--fond);border-radius:10px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Tableurs & Présentations</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;">
+                      <span style="padding:3px 8px;background:#FFFBEB;border-radius:6px;color:#B45309;">Excel → PDF</span>
+                      <span style="padding:3px 8px;background:#FFFBEB;border-radius:6px;color:#B45309;">PowerPoint → PDF</span>
+                      <span style="padding:3px 8px;background:#FFFBEB;border-radius:6px;color:#B45309;">Excel → CSV</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Historique des conversions -->
+              <div class="card" style="padding:20px;">
+                <div style="font-size:14px;font-weight:700;color:var(--bleu);margin-bottom:14px;">Historique</div>
+                <div style="display:flex;flex-direction:column;gap:8px;" id="convHistorique">
+                  <div class="conv-history-item">
+                    <span style="font-size:16px;">📄</span>
+                    <span class="conv-history-from">passeport.jpg</span>
+                    <span class="conv-history-arrow">→</span>
+                    <span class="conv-history-to">PDF</span>
+                    <span class="conv-history-time">Hier 14h22</span>
+                    <button class="conv-dl">⬇</button>
+                  </div>
+                  <div class="conv-history-item">
+                    <span style="font-size:16px;">📝</span>
+                    <span class="conv-history-from">contrat.docx</span>
+                    <span class="conv-history-arrow">→</span>
+                    <span class="conv-history-to">PDF</span>
+                    <span class="conv-history-time">Lun 09h15</span>
+                    <button class="conv-dl">⬇</button>
+                  </div>
+                  <div class="conv-history-item">
+                    <span style="font-size:16px;">📊</span>
+                    <span class="conv-history-from">bulletin.pdf</span>
+                    <span class="conv-history-arrow">→</span>
+                    <span class="conv-history-to">Word</span>
+                    <span class="conv-history-time">Sam 17h40</span>
+                    <button class="conv-dl">⬇</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── SCANNER ── -->
+        <div class="dash-tab" id="dt-scanner">
+          <div class="section-title">📸 Scanner intelligent</div>
+          <div class="section-sub">Photographiez vos documents — l'IA les analyse et vérifie automatiquement</div>
+          <div class="g2">
+            <div class="card" style="text-align:center;">
+              <div style="font-size:64px;margin-bottom:20px;opacity:.4">📷</div>
+              <p style="font-size:14px;color:var(--gris);margin-bottom:20px;line-height:1.7">Prenez en photo ou importez un document.<br>L'IA vérifie s'il est lisible, complet et valide.</p>
+              <button class="btn btn-bleu btn-full">📷 Prendre une photo</button>
+              <button class="btn btn-outline btn-full mt8">📁 Importer un fichier</button>
+            </div>
+            <div class="card">
+              <div style="font-size:14px;font-weight:700;color:var(--bleu);margin-bottom:16px;">Ce que l'IA vérifie</div>
+              <ul style="list-style:none;display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--texte);">
+                <li style="display:flex;gap:8px;"><span style="color:#15803D;font-weight:700;">✓</span> Document lisible et net</li>
+                <li style="display:flex;gap:8px;"><span style="color:#15803D;font-weight:700;">✓</span> Date de validité (non expiré)</li>
+                <li style="display:flex;gap:8px;"><span style="color:#15803D;font-weight:700;">✓</span> Toutes les pages présentes</li>
+                <li style="display:flex;gap:8px;"><span style="color:#15803D;font-weight:700;">✓</span> Informations correctement visibles</li>
+                <li style="display:flex;gap:8px;"><span style="color:#15803D;font-weight:700;">✓</span> Correspond au type de document requis</li>
+                <li style="display:flex;gap:8px;"><span style="color:#15803D;font-weight:700;">✓</span> Format et taille acceptés par la préfecture</li>
+              </ul>
+              <div class="alerte amber mt16" style="margin-bottom:0;">
+                <span class="alerte-icon">💡</span>
+                <div class="alerte-body"><strong>Conseil</strong> Scannez en lumière naturelle pour un meilleur résultat.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /dash-content -->
+    </div><!-- /dash-main -->
+  </div><!-- /dash-layout -->
+</div><!-- /p-dashboard -->
+
+
+<script>
+/* ═══ ROUTEUR ═══ */
+function aller(id) {
+  const actuelle = document.querySelector('.page.active');
+  if (actuelle) actuelle.classList.add('out');
+  setTimeout(() => { if (actuelle) actuelle.classList.remove('active','out'); }, 260);
+
+  const cible = document.getElementById(id);
+  if (cible) {
+    setTimeout(() => { cible.classList.add('active'); }, 50);
+  }
+}
+
+/* ═══ HORLOGE — une seule instance, met à jour tous les champs ═══ */
+const JOURS  = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MOIS   = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+const clockIds = ['c1','c2','c3','c4','c5','c6','c7','c8'];
+
+function majHorloge() {
+  const n = new Date();
+  const H = String(n.getHours()).padStart(2,'0');
+  const M = String(n.getMinutes()).padStart(2,'0');
+  const tStr = H + ':' + M;
+  const dStr = JOURS[n.getDay()] + ' ' + n.getDate() + ' ' + MOIS[n.getMonth()];
+  clockIds.forEach(prefix => {
+    const te = document.getElementById(prefix + 't');
+    const de = document.getElementById(prefix + 'd');
+    if (te) te.textContent = tStr;
+    if (de) de.textContent = dStr;
+  });
+}
+majHorloge();
+setInterval(majHorloge, 10000); /* toutes les 10s — stable, pas de micro-tremblement */
+
+/* ═══ AUTH ═══ */
+let utilisateur = { nom: 'Mohamed', initiales: 'M' };
+
+function inscrire() {
+  const n = document.getElementById('reg-nom').value.trim();
+  if (!n) { alert('Entrez votre nom'); return; }
+  const mots = n.split(' ');
+  utilisateur.nom = mots[0];
+  utilisateur.initiales = mots.map(m => m[0]).join('').toUpperCase().slice(0,2);
+  aller('p-langue');
+}
+
+function connecter() {
+  aller('p-dashboard');
+  initDash();
+}
+
+/* ═══ LANGUE ═══ */
+function selLang(el) {
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ═══ MIC ═══ */
+let enregistrement = false, timerMic = null;
+
+function toggleMic() {
+  enregistrement = !enregistrement;
+  const btn  = document.getElementById('micBtn');
+  const ring = document.getElementById('micRing');
+  const hint = document.getElementById('micHint');
+
+  if (enregistrement) {
+    btn.textContent = '⏹'; btn.classList.add('on');
+    ring.classList.add('on');
+    hint.textContent = 'Enregistrement… Parlez maintenant';
+    timerMic = setTimeout(() => {
+      enregistrement = false;
+      btn.textContent = '🎤'; btn.classList.remove('on');
+      ring.classList.remove('on');
+      hint.textContent = '✅ Enregistré — cliquez sur Analyser';
+      document.getElementById('situTxt').value = "Je suis arrivé en France il y a 6 mois avec un visa étudiant. J'ai fini mes études et je veux travailler dans la restauration. Je viens d'Algérie, j'ai 27 ans et j'ai un contrat proposé.";
+    }, 4000);
+  } else {
+    clearTimeout(timerMic);
+    btn.textContent = '🎤'; btn.classList.remove('on');
+    ring.classList.remove('on');
+    hint.textContent = 'Appuyez pour parler';
+  }
+}
+
+/* ═══ ANALYSE IA ═══ */
+function analyser() {
+  aller('p-resume');
+  document.getElementById('iaLoading').classList.remove('hidden');
+  document.getElementById('iaResult').classList.add('hidden');
+  setTimeout(() => {
+    document.getElementById('iaLoading').classList.add('hidden');
+    document.getElementById('iaResult').classList.remove('hidden');
+  }, 2800);
+}
+
+/* ═══ PAIEMENT ═══ */
+function selPlan(el) {
+  document.querySelectorAll('.plan').forEach(p => p.classList.remove('chosen'));
+  el.classList.add('chosen');
+}
+function selPay(el) {
+  document.querySelectorAll('.pay-m').forEach(m => m.classList.remove('chosen'));
+  el.classList.add('chosen');
+}
+
+/* ═══ DASHBOARD ═══ */
+function initDash() {
+  document.getElementById('dsAv').textContent = utilisateur.initiales;
+  document.getElementById('dsNm').textContent = utilisateur.nom;
+  document.getElementById('dashTitle').textContent = 'Vue d\'ensemble';
+  /* Anime la barre de progression */
+  setTimeout(() => {
+    const b = document.getElementById('pBar');
+    if (b) b.style.width = '67%';
+  }, 400);
+}
+
+const DASH_TITRES = {
+  overview:    ["Vue d'ensemble",              "Titre de séjour · Première demande · AV-2026-7834"],
+  docs:        ["Mes documents",               "6 fournis · 2 urgents · 1 à faire"],
+  etapes:      ["Mes étapes",                  "3 complétées · 1 en cours · 1 à venir"],
+  messages:    ["Messages",                    "2 nouveaux messages non lus"],
+  rdv:         ["Rendez-vous",                 "Prochain : mardi 24 juin 2026 · 10h30"],
+  carte:       ["Carte avocats & associations","Avocats en droit des étrangers · Associations d'aide"],
+  emploi:      ["Carte emploi en tension",     "Entreprises qui recrutent en France · Secteurs prioritaires"],
+  cv:          ["Générateur de CV",           "Créez un CV professionnel PDF prêt à envoyer"],
+  attestation: ["Attestation de domicile",     "Générez une attestation officielle en 1 clic"],
+  lettre:      ["Lettre de motivation",        "Générez une lettre personnalisée pour votre candidature"],
+  formulaires: ["Formulaires automatiques",    "CAF · OFII · Sécurité sociale · Préfecture · Logement"],
+  lettreadmin: ["Lettres administratives",     "Générez tout type de courrier officiel"],
+  convertisseur:["Convertisseur de documents",  "Word, PDF, JPG, Excel, PowerPoint — tous formats"],
+  scanner:     ["Scanner de documents",        "L'IA analyse et vérifie vos documents automatiquement"],
+  quiz:        ["Quiz civique",                "Préparation formation OFII"],
+  params:      ["Paramètres",                 "Profil · Notifications · Abonnement"],
+};
+
+function dTab(id, navEl) {
+  /* Cacher tous les onglets */
+  document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('dt-' + id).classList.add('on');
+
+  /* Sidebar */
+  if (navEl) {
+    document.querySelectorAll('.ds-item').forEach(i => i.classList.remove('on'));
+    navEl.classList.add('on');
+  }
+
+  /* Titre topbar */
+  const [titre, sous] = DASH_TITRES[id] || ['—',''];
+  document.getElementById('dashTitle').textContent = titre;
+  document.getElementById('dashSub').textContent = sous;
+
+  /* Carte */
+  if (id === 'carte') setTimeout(initMap, 200);
+  if (id === 'emploi') setTimeout(initMapEmploi, 200);
+}
+
+/* ═══ LECTURE AUDIO ═══ */
+function readPage() {
+  const onglet = document.querySelector('.dash-tab.on');
+  if (!onglet) return;
+  const texte = onglet.innerText.replace(/\s+/g,' ').trim().slice(0,500);
+  const u = new SpeechSynthesisUtterance(texte);
+  u.lang = 'fr-FR'; u.rate = 0.95;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+/* ═══ QUIZ ═══ */
+let qBon = 0, qTotal = 0;
+function qAnswer(btn, correct) {
+  qTotal++;
+  if (correct) { qBon++; btn.classList.add('bon'); }
+  else {
+    btn.classList.add('mal');
+    document.querySelectorAll('.qo').forEach(b => {
+      if (b.textContent.includes('Liberté')) b.classList.add('bon');
+    });
+  }
+  document.querySelectorAll('.qo').forEach(b => b.style.pointerEvents = 'none');
+  document.getElementById('qScore').textContent = `Score : ${qBon} / ${qTotal}`;
+}
+
+/* ═══ TIROIR GÉNÉRATEURS ═══ */
+function ouvrirTiroir() {
+  document.getElementById('genOverlay').classList.add('open');
+  document.getElementById('genDrawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function fermerTiroir() {
+  document.getElementById('genOverlay').classList.remove('open');
+  document.getElementById('genDrawer').classList.remove('open');
+  document.body.style.overflow = '';
+}
+// Fermer avec Echap
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerTiroir(); });
+
+/* ═══ MAPBOX ═══ */
+const LIEUX = [
+  {t:'avocat', n:'Cabinet Dupont — Droit des étrangers', v:'Paris',       c:[2.352,48.857],  d:'Titre de séjour, asile, recours CNDA · Consultations gratuites le lundi'},
+  {t:'avocat', n:'Me Leila Benali',                       v:'Lyon',        c:[4.836,45.764],  d:'Immigration et nationalité · Arabophone'},
+  {t:'avocat', n:'Cabinet Moreau & Associés',             v:'Marseille',   c:[5.370,43.297],  d:'OFPRA, CNDA, Tribunal Administratif'},
+  {t:'avocat', n:'Me Jean-Pierre Auroux',                 v:'Toulouse',    c:[1.444,43.605],  d:'Titre de séjour salarié, naturalisation'},
+  {t:'avocat', n:'Cabinet Stein',                         v:'Strasbourg',  c:[7.752,48.573],  d:'Droit européen de la circulation'},
+  {t:'avocat', n:'Me Sarah Karim',                        v:'Bordeaux',    c:[-0.579,44.838], d:'Asile, protection subsidiaire · Darija'},
+  {t:'avocat', n:'Cabinet Millet',                        v:'Lille',       c:[3.057,50.629],  d:'Regroupement familial, naturalisation'},
+  {t:'avocat', n:'Me Farid Ouali',                        v:'Nantes',      c:[-1.553,47.218], d:'Titre de séjour, OQTF, recours'},
+  {t:'avocat', n:'Cabinet Hassan',                        v:'Nice',        c:[7.262,43.710],  d:'Immigration et droit des étrangers'},
+  {t:'avocat', n:'Me Arnaud Rivière',                     v:'Montpellier', c:[3.877,43.611],  d:'Asile, OFPRA, droit humanitaire'},
+  {t:'assoc',  n:'La Cimade',                             v:'Paris',       c:[2.367,48.848],  d:'Aide juridique migrants et réfugiés · Permanences gratuites'},
+  {t:'assoc',  n:"France Terre d'Asile",                  v:'Paris',       c:[2.349,48.853],  d:'Hébergement et accompagnement demandeurs asile'},
+  {t:'assoc',  n:'Croix-Rouge Accueil',                   v:'Lyon',        c:[4.827,45.749],  d:'Aide humanitaire, hébergement urgence'},
+  {t:'assoc',  n:'Emmaüs',                                v:'Marseille',   c:[5.377,43.305],  d:'Insertion sociale et professionnelle'},
+  {t:'assoc',  n:'CADA Lille',                            v:'Lille',       c:[3.070,50.637],  d:"Centre d'accueil demandeurs d'asile"},
+  {t:'assoc',  n:'Forum Réfugiés',                        v:'Lyon',        c:[4.845,45.756],  d:'Asile, intégration, accompagnement juridique'},
+  {t:'assoc',  n:'Médecins du Monde',                     v:'Nantes',      c:[-1.548,47.225], d:'Soins et accompagnement sans-papiers'},
+  {t:'assoc',  n:'Gisti',                                 v:'Paris',       c:[2.340,48.862],  d:'Information et soutien travailleurs immigrés'},
+  {t:'assoc',  n:'Amnesty International',                 v:'Toulouse',    c:[1.430,43.613],  d:'Défense des droits humains'},
+  {t:'assoc',  n:'Secours Catholique',                    v:'Bordeaux',    c:[-0.568,44.845], d:'Aide alimentaire et accompagnement'},
+];
+
+const EMPLOIS = [
+  {t:'btp',       n:'Vinci Construction',  v:'Paris',      c:[2.370,48.840], d:'Maçons, coffreurs, électriciens · CDI urgent'},
+  {t:'resto',     n:'Elior Group',         v:'Lyon',       c:[4.850,45.770], d:'Cuisiniers, plongeurs · 200 postes ouverts'},
+  {t:'logistique',n:'Chronopost',          v:'Paris',      c:[2.330,48.870], d:'Livreurs, préparateurs · CDI + formation'},
+  {t:'soin',      n:'Sodexo Services',     v:'Marseille',  c:[5.380,43.290], d:'Agents de service · horaires flexibles'},
+  {t:'soin',      n:'Korian',             v:'Toulouse',   c:[1.450,43.595], d:'Auxiliaires de vie · formation possible'},
+  {t:'resto',     n:'Accor Hotels',        v:'Nice',       c:[7.270,43.720], d:'Réceptionnistes, femmes de chambre'},
+  {t:'logistique',n:'ID Logistics',        v:'Bordeaux',   c:[-0.590,44.820],d:'Caristes, préparateurs · poste urgent'},
+  {t:'btp',       n:'Leroy Merlin',        v:'Lille',      c:[3.045,50.620], d:'Vendeurs BTP · profils terrain bienvenus'},
+];
+
+const COULEURS_LIEUX = { avocat:'#1D4ED8', assoc:'#15803D' };
+const COULEURS_EMPLOI = { btp:'#D97706', resto:'#DC2626', logistique:'#7C3AED', soin:'#0891B2' };
+const EMOJIS_LIEUX  = { avocat:'⚖️', assoc:'🤝' };
+const EMOJIS_EMPLOI = { btp:'🏗️', resto:'🍽️', logistique:'🚚', soin:'👴' };
+
+let mapOK = false, mapObj = null, marqueurs = [];
+let mapEmploiOK = false, mapEmploiObj = null, marqueurs2 = [];
+
+function initMap() {
+  if (mapOK) return;
+  const el = document.getElementById('mapbox');
+  if (!el) return;
+
+  mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+
+  try {
+    mapObj = new mapboxgl.Map({
+      container: 'mapbox',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [2.3522, 46.5],
+      zoom: 5.0,
+    });
+    mapObj.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+    mapObj.on('load', () => {
+      LIEUX.forEach(l => ajouterPin(l, mapObj, COULEURS_LIEUX, EMOJIS_LIEUX, marqueurs));
+      mapOK = true;
+    });
+  } catch(e) {
+    el.innerHTML = mapFallback('avocats et associations');
+  }
+}
+
+function initMapEmploi() {
+  if (mapEmploiOK) return;
+  const el = document.getElementById('mapbox-emploi');
+  if (!el) return;
+
+  mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
+
+  try {
+    mapEmploiObj = new mapboxgl.Map({
+      container: 'mapbox-emploi',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [2.3522, 46.5],
+      zoom: 5.0,
+    });
+    mapEmploiObj.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+    mapEmploiObj.on('load', () => {
+      EMPLOIS.forEach(l => ajouterPin(l, mapEmploiObj, COULEURS_EMPLOI, EMOJIS_EMPLOI, marqueurs2));
+      mapEmploiOK = true;
+    });
+  } catch(e) {
+    el.innerHTML = mapFallback('emploi en tension');
+  }
+}
+
+function mapFallback(type) {
+  return `<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:32px;text-align:center;background:#F4F6FB;border-radius:14px;">
+    <div style="font-size:48px;opacity:.3">🗺️</div>
+    <div style="font-size:16px;font-weight:700;color:#0A2463">Carte ${type}</div>
+    <div style="font-size:13px;color:#6B7A99;max-width:340px;line-height:1.7">Disponible en production avec votre clé Mapbox. Tous les points sont géolocalisés et prêts à s'afficher.</div>
+  </div>`;
+}
+
+function ajouterPin(lieu, map, couleurs, emojis, liste) {
+  const el = document.createElement('div');
+  el.dataset.type = lieu.t;
+  const col = couleurs[lieu.t] || '#1D4ED8';
+  const emoji = emojis[lieu.t] || '📍';
+  el.style.cssText = `
+    width:34px;height:34px;border-radius:50%;
+    background:${col};
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;cursor:pointer;
+    box-shadow:0 3px 10px rgba(0,0,0,0.3);
+    border:2.5px solid #fff;
+    transition:transform .15s;
+  `;
+  el.textContent = emoji;
+  el.addEventListener('mouseenter', () => el.style.transform = 'scale(1.25)');
+  el.addEventListener('mouseleave', () => el.style.transform = 'scale(1)');
+
+  const popup = new mapboxgl.Popup({ offset:16, closeButton:false, maxWidth:'220px' })
+    .setHTML(`<div style="font-family:Inter,sans-serif;padding:4px 2px;">
+      <div style="font-weight:800;font-size:13px;color:#0A2463;margin-bottom:3px;">${lieu.n}</div>
+      <div style="font-size:11px;color:#6B7A99;margin-bottom:6px;">📍 ${lieu.v}</div>
+      <div style="font-size:12px;color:#374151;line-height:1.55;">${lieu.d}</div>
+    </div>`);
+
+  const m = new mapboxgl.Marker(el).setLngLat(lieu.c).setPopup(popup).addTo(map);
+  liste.push({ el, type: lieu.t });
+}
+
+function mFilter(type, btn) {
+  document.querySelectorAll('#mf-all,#mf-avocat,#mf-assoc').forEach(b => b && b.classList.remove('on'));
+  btn.classList.add('on');
+  marqueurs.forEach(({ el, type: t }) => {
+    el.style.display = (type === 'all' || t === type) ? 'flex' : 'none';
+  });
+}
+
+function mFilterEmploi(type, btn) {
+  document.querySelectorAll('[onclick*="mFilterEmploi"]').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  marqueurs2.forEach(({ el, type: t }) => {
+    el.style.display = (type === 'all' || t === type) ? 'flex' : 'none';
+  });
+}
+/* ═══ CONVERTISSEUR DE DOCUMENTS ═══ */
+const CONV_FORMATS = {
+  pdf:  { icon:'📄', label:'PDF',        cibles:['Word (.docx)','JPG','PNG','TXT'] },
+  docx: { icon:'📝', label:'Word',       cibles:['PDF','TXT'] },
+  doc:  { icon:'📝', label:'Word (.doc)',cibles:['PDF','TXT'] },
+  jpg:  { icon:'🖼️', label:'JPG',        cibles:['PDF','PNG'] },
+  jpeg: { icon:'🖼️', label:'JPG',        cibles:['PDF','PNG'] },
+  png:  { icon:'🖼️', label:'PNG',        cibles:['PDF','JPG'] },
+  txt:  { icon:'📃', label:'TXT',        cibles:['PDF','Word (.docx)'] },
+  xlsx: { icon:'📊', label:'Excel',      cibles:['PDF','CSV'] },
+  xls:  { icon:'📊', label:'Excel',      cibles:['PDF','CSV'] },
+  pptx: { icon:'📑', label:'PowerPoint', cibles:['PDF'] },
+  ppt:  { icon:'📑', label:'PowerPoint', cibles:['PDF'] },
+  odt:  { icon:'📄', label:'ODT',        cibles:['PDF','Word (.docx)'] },
+};
+const CIBLE_ICONS = {
+  'PDF':'📄','Word (.docx)':'📝','JPG':'🖼️','PNG':'🖼️','TXT':'📃','CSV':'📊'
+};
+
+let convFichier = null;
+let convCibleChoisie = null;
+
+function convExt(nom) {
+  return nom.split('.').pop().toLowerCase();
+}
+
+function convDragOver(e) {
+  e.preventDefault();
+  document.getElementById('convDropZone').classList.add('dragover');
+}
+function convDragLeave(e) {
+  document.getElementById('convDropZone').classList.remove('dragover');
+}
+function convDrop(e) {
+  e.preventDefault();
+  document.getElementById('convDropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) convCharger(file);
+}
+function convFileSelected(input) {
+  if (input.files[0]) convCharger(input.files[0]);
+}
+
+function convCharger(file) {
+  convFichier = file;
+  const ext = convExt(file.name);
+  const fmt = CONV_FORMATS[ext];
+
+  // Afficher la card fichier
+  document.getElementById('convDropZone').style.display = 'none';
+  const fc = document.getElementById('convFileCard');
+  fc.style.display = 'block';
+  document.getElementById('convFileIcon').textContent = fmt ? fmt.icon : '📄';
+  document.getElementById('convFileName').textContent = file.name;
+  const kb = (file.size / 1024).toFixed(0);
+  const mb = (file.size / 1024 / 1024).toFixed(2);
+  document.getElementById('convFileSize').textContent = file.size > 1024*1024 ? mb+' Mo' : kb+' Ko';
+
+  // Formats cibles
+  const container = document.getElementById('convFormats');
+  if (!fmt) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--rouge);">Format non supporté. Essayez PDF, Word, JPG, PNG, Excel ou PowerPoint.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  convCibleChoisie = null;
+  fmt.cibles.forEach(cible => {
+    const btn = document.createElement('button');
+    btn.className = 'conv-format-btn';
+    btn.innerHTML = `<span class="conv-format-icon">${CIBLE_ICONS[cible] || '📄'}</span>${cible}`;
+    btn.onclick = () => {
+      document.querySelectorAll('.conv-format-btn').forEach(b => b.classList.remove('chosen'));
+      btn.classList.add('chosen');
+      convCibleChoisie = cible;
+      document.getElementById('convBtn').style.display = 'flex';
+    };
+    container.appendChild(btn);
+  });
+}
+
+function convReset() {
+  convFichier = null; convCibleChoisie = null;
+  document.getElementById('convDropZone').style.display = 'block';
+  document.getElementById('convFileCard').style.display = 'none';
+  document.getElementById('convFormats').innerHTML = '<div style="font-size:13px;color:var(--gris);">Importez d\'abord un fichier pour voir les formats disponibles.</div>';
+  document.getElementById('convBtn').style.display = 'none';
+  document.getElementById('convProgWrap').style.display = 'none';
+  document.getElementById('convResult').style.display = 'none';
+  document.getElementById('convProgFill').style.width = '0%';
+  document.getElementById('convFileInput').value = '';
+}
+
+function convLancer() {
+  if (!convFichier || !convCibleChoisie) return;
+  document.getElementById('convBtn').style.display = 'none';
+  const wrap = document.getElementById('convProgWrap');
+  wrap.style.display = 'block';
+  const fill = document.getElementById('convProgFill');
+  const label = document.getElementById('convProgLabel');
+
+  const steps = [
+    [10, 'Lecture du fichier…'],
+    [35, 'Analyse du contenu…'],
+    [60, 'Conversion en cours…'],
+    [85, 'Finalisation…'],
+    [100,'Conversion terminée !'],
+  ];
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i >= steps.length) {
+      clearInterval(interval);
+      // Afficher résultat
+      setTimeout(() => {
+        wrap.style.display = 'none';
+        afficherResultat();
+      }, 400);
+      return;
+    }
+    fill.style.width = steps[i][0] + '%';
+    label.textContent = steps[i][1];
+    i++;
+  }, 500);
+}
+
+function afficherResultat() {
+  const ext = convExt(convFichier.name);
+  const baseName = convFichier.name.replace('.' + ext, '');
+  const extCible = convCibleChoisie.replace(' (.docx)','').replace(' (.doc)','').toLowerCase();
+  const nomResultat = baseName + '.' + (extCible === 'word' ? 'docx' : extCible);
+
+  document.getElementById('convResultIcon').textContent = CIBLE_ICONS[convCibleChoisie] || '📄';
+  document.getElementById('convResultName').textContent = nomResultat;
+  document.getElementById('convResultSub').textContent = 'Converti depuis ' + convFichier.name + ' · Prêt à télécharger';
+  document.getElementById('convResult').style.display = 'block';
+
+  // Ajouter à l'historique
+  const histo = document.getElementById('convHistorique');
+  const item = document.createElement('div');
+  item.className = 'conv-history-item';
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  item.innerHTML = `
+    <span style="font-size:16px;">${CONV_FORMATS[ext]?.icon || '📄'}</span>
+    <span class="conv-history-from">${convFichier.name}</span>
+    <span class="conv-history-arrow">→</span>
+    <span class="conv-history-to">${convCibleChoisie}</span>
+    <span class="conv-history-time">Aujourd'hui ${h}h${m}</span>
+    <button class="conv-dl">⬇</button>
+  `;
+  histo.insertBefore(item, histo.firstChild);
+}
+
+function convTelecharger() {
+  // Simulation téléchargement
+  const btn = document.querySelector('#convResult .btn-bleu');
+  const orig = btn.textContent;
+  btn.textContent = '✅ Téléchargé !';
+  btn.style.background = '#15803D';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2500);
+}
+
+/* ═══ SYSTÈME VOCAL DU TIROIR ═══ */
+
+const EXPLICATIONS = {
+
+  tout: "Bonjour, bienvenue dans les générateurs AdminPocket. Cette section regroupe tous vos outils pour simplifier vos démarches administratives en France. Vous trouverez ici des générateurs de documents personnels, des formulaires officiels pré-remplis, et des outils pratiques comme le convertisseur et le scanner.",
+
+  cv: "Le générateur de CV vous permet de créer un curriculum vitae professionnel complet en quelques minutes. Vous renseignez simplement vos informations — votre prénom, votre métier, vos expériences et vos langues — et l'application génère automatiquement un CV au format PDF. Ce document est directement prêt à envoyer aux employeurs français pour votre recherche d'emploi.",
+
+  attestation: "L'attestation de domicile est un document officiel qui prouve que vous habitez bien à une adresse en France. AdminPocket la génère automatiquement avec vos informations enregistrées dans votre dossier. Ce document est souvent demandé par la préfecture, la CAF, ou d'autres organismes lors de vos démarches administratives.",
+
+  lettre: "La lettre de motivation vous aide à vous présenter à un employeur de façon professionnelle et convaincante. Vous indiquez simplement le poste que vous visez, le nom de l'entreprise, et vos points forts — l'IA rédige ensuite une lettre personnalisée et adaptée. Elle est disponible en plusieurs langues pour vous aider à postuler dans les meilleures conditions.",
+
+  formulaires: "Les formulaires automatiques vous évitent de remplir à la main des documents administratifs complexes. AdminPocket pré-remplit automatiquement les formulaires les plus courants comme la CAF pour vos allocations, l'OFII pour votre intégration, la sécurité sociale pour votre carte vitale, et les formulaires de la préfecture pour votre titre de séjour. Vous gagnez du temps et évitez les erreurs de saisie.",
+
+  lettreadmin: "Le générateur de lettres administratives vous permet de rédiger tout type de courrier officiel sans difficulté. Que vous souhaitiez contester une décision, faire un recours gracieux, demander un délai, ou écrire à un organisme public — l'application génère la lettre correcte dans le bon format. Vous n'avez plus besoin de connaître les formules administratives, tout est géré pour vous.",
+
+  convertisseur: "Le convertisseur de documents transforme vos fichiers d'un format à un autre en quelques secondes. Par exemple, vous pouvez convertir un document Word en PDF, une photo JPG en PDF, ou encore un fichier PDF en Word pour le modifier. C'est particulièrement utile quand un organisme vous demande un document dans un format spécifique que vous n'avez pas.",
+
+  scanner: "Le scanner intelligent vous permet de photographier un document avec votre téléphone et de vérifier qu'il est conforme aux exigences administratives. L'intelligence artificielle analyse automatiquement si le document est lisible, si la date de validité n'est pas dépassée, et si toutes les pages sont présentes. Cela vous évite de déposer des documents refusés lors de vos rendez-vous en préfecture.",
+
+  carte: "La carte des ressources vous affiche sur une carte interactive de France l'ensemble des avocats spécialisés en droit des étrangers et des associations d'aide aux migrants. Vous pouvez filtrer par type de ressource et cliquer sur chaque marqueur pour voir le nom, la ville et la spécialité. C'est un outil précieux pour trouver rapidement une aide juridique ou humanitaire près de chez vous.",
+
+  emploi: "La carte emploi en tension vous indique les entreprises qui recrutent activement en France dans les secteurs qui manquent de personnel. Vous verrez des entreprises dans le BTP, la restauration, la logistique et l'aide à la personne — des domaines où les étrangers peuvent trouver un emploi même sans parler parfaitement le français. Chaque marqueur sur la carte vous donne le nom de l'entreprise, le type de poste et les conditions d'embauche.",
+
+  quiz: "Le quiz civique vous prépare à la formation obligatoire de l'OFII dans le cadre du Contrat d'Intégration Républicaine. Il couvre les valeurs de la République française, les institutions, la devise, la laïcité, et les droits fondamentaux en cinq séries de vingt questions chacune. Chaque bonne réponse est expliquée pour vous aider à vraiment comprendre et retenir les informations."
+};
+
+let vocalEnCours = null;
+let vocalBtnEnCours = null;
+
+function vocalStop() {
+  window.speechSynthesis.cancel();
+  if (vocalBtnEnCours) {
+    vocalBtnEnCours.classList.remove('playing');
+    vocalBtnEnCours.textContent = '🔊';
+  }
+  // plus de bouton global
+  const bubble = document.getElementById('audioBubble');
+  if (bubble) bubble.classList.remove('visible');
+  vocalEnCours = null;
+  vocalBtnEnCours = null;
+}
+
+function choisirVoixFeminine() {
+  // Attente que les voix soient chargées
+  const voix = window.speechSynthesis.getVoices();
+
+  // Priorité 1 : voix Apple "Amélie" (iOS/macOS) — la plus naturelle en français
+  const amelie = voix.find(v => v.name === 'Amélie');
+  if (amelie) return amelie;
+
+  // Priorité 2 : voix "Thomas" à exclure, "Audrey", "Marie", "Lea", "Julie"
+  const noms_feminins = ['audrey','marie','lea','julie','sophie','alice','claire','emma','isabelle','camille'];
+  const parNom = voix.find(v =>
+    v.lang && v.lang.startsWith('fr') &&
+    noms_feminins.some(n => v.name.toLowerCase().includes(n))
+  );
+  if (parNom) return parNom;
+
+  // Priorité 3 : voix fr-FR qui ne contient pas "male" ni "thomas" ni "pierre"
+  const noms_masculins = ['thomas','pierre','nicolas','paul','male','man'];
+  const frFemme = voix.find(v =>
+    v.lang === 'fr-FR' &&
+    !noms_masculins.some(n => v.name.toLowerCase().includes(n))
+  );
+  if (frFemme) return frFemme;
+
+  // Priorité 4 : n'importe quelle voix fr
+  const frQuelconque = voix.find(v => v.lang && v.lang.startsWith('fr'));
+  if (frQuelconque) return frQuelconque;
+
+  return null;
+}
+
+function vocalLire(cle, btn) {
+  if (vocalEnCours === cle) { vocalStop(); return; }
+  vocalStop();
+
+  const texte = EXPLICATIONS[cle];
+  if (!texte) return;
+
+  vocalEnCours = cle;
+  vocalBtnEnCours = btn;
+  btn.classList.add('playing');
+  btn.textContent = '⏹';
+
+  // Afficher la bulle avec les 2 premières phrases
+  const bubble = document.getElementById('audioBubble');
+  const bubbleText = document.getElementById('audioBubbleText');
+  if (bubble && bubbleText) {
+    const phrases = texte.split('. ');
+    const resume = phrases.slice(0,2).join('. ') + '.';
+    bubbleText.textContent = resume;
+    bubble.classList.add('visible');
+  }
+
+  const u = new SpeechSynthesisUtterance(texte);
+  u.lang = 'fr-FR';
+
+  // Voix naturelle féminine : pas nasale, débit calme, intonation douce
+  u.rate  = 0.88;   // légèrement plus lent que normal = plus naturel, moins robotique
+  u.pitch = 1.0;    // pitch neutre = 1.0 exactement, jamais au-dessus = pas de nasalité
+  u.volume = 1.0;
+
+  const voix = choisirVoixFeminine();
+  if (voix) u.voice = voix;
+
+  u.onend   = () => vocalStop();
+  u.onerror = () => vocalStop();
+
+  // Petit délai pour laisser le navigateur initialiser la voix
+  setTimeout(() => {
+    window.speechSynthesis.cancel(); // flush
+    window.speechSynthesis.speak(u);
+  }, 80);
+}
+
+function vocalItem(cle, btn) {
+  document.querySelectorAll('.gen-item-vocal').forEach(b => {
+    b.classList.remove('playing');
+    b.textContent = '🔊';
+  });
+  vocalLire(cle, btn);
+}
+
+// Pré-charger les voix dès que possible
+if (window.speechSynthesis) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+}
+
+</script>
+
+<!-- ══════════════════════════════════════════
+     TIROIR GÉNÉRATEURS (overlay)
+══════════════════════════════════════════ -->
+<div class="gen-overlay" id="genOverlay" onclick="fermerTiroir()"></div>
+<div class="gen-drawer" id="genDrawer">
+  <div class="gen-drawer-head">
+    <div class="gen-drawer-title">🏛️ Générateurs AdminPocket</div>
+    <button class="gen-drawer-close" onclick="fermerTiroir()">✕</button>
+  </div>
+  <div class="gen-drawer-sub">Tous vos outils administratifs · Appuyez 🔊 sur chaque outil pour l'écouter</div>
+
+  <!-- Bulle audio globale -->
+  <div class="gen-audio-bubble" id="audioBubble">
+    <span id="audioBubbleText"></span>
+    <div class="gen-audio-bubble-bar">
+      <div class="gen-audio-wave"></div>
+      <div class="gen-audio-wave"></div>
+      <div class="gen-audio-wave"></div>
+      <div class="gen-audio-wave"></div>
+      <div class="gen-audio-wave"></div>
+      <div class="gen-audio-wave"></div>
+      <button class="gen-audio-stop" onclick="vocalStop()">■ Stop</button>
+    </div>
+  </div>
+
+  <div class="gen-drawer-body">
+
+    <div class="gen-section-label">📄 Documents personnels</div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('cv',null)">
+      <div class="gen-item-icon bleu">📄</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Générateur de CV</div>
+        <div class="gen-item-desc">CV professionnel PDF prêt à envoyer aux employeurs</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('cv',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('attestation',null)">
+      <div class="gen-item-icon vert">🏠</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Attestation de domicile</div>
+        <div class="gen-item-desc">Générée automatiquement avec vos informations</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('attestation',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('lettre',null)">
+      <div class="gen-item-icon amber">✉️</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Lettre de motivation</div>
+        <div class="gen-item-desc">Personnalisée selon votre métier et l'entreprise visée</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('lettre',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-section-label">📋 Formulaires officiels</div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('formulaires',null)">
+      <div class="gen-item-icon rouge">📋</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Formulaires automatiques</div>
+        <div class="gen-item-desc">CAF · OFII · Sécurité sociale · Préfecture · Logement</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('formulaires',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('lettreadmin',null)">
+      <div class="gen-item-icon violet">📝</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Lettres administratives</div>
+        <div class="gen-item-desc">Recours, réclamation, contestation, demande officielle</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('lettreadmin',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-section-label">🔧 Outils</div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('convertisseur',null)">
+      <div class="gen-item-icon violet">🔄</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Convertisseur de documents</div>
+        <div class="gen-item-desc">Word → PDF, JPG → PDF, PDF → Word et plus</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('convertisseur',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('scanner',null)">
+      <div class="gen-item-icon bleu">📸</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Scanner intelligent</div>
+        <div class="gen-item-desc">L'IA analyse et vérifie vos documents automatiquement</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('scanner',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('carte',null)">
+      <div class="gen-item-icon vert">🗺️</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Carte avocats & associations</div>
+        <div class="gen-item-desc">Ressources juridiques et d'aide en France</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('carte',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('emploi',null)">
+      <div class="gen-item-icon amber">💼</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Carte emploi en tension</div>
+        <div class="gen-item-desc">Entreprises qui recrutent partout en France</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('emploi',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+    <div class="gen-item" onclick="fermerTiroir();dTab('quiz',null)">
+      <div class="gen-item-icon rouge">🇫🇷</div>
+      <div class="gen-item-body">
+        <div class="gen-item-name">Quiz civique OFII</div>
+        <div class="gen-item-desc">Préparez votre formation civique obligatoire</div>
+      </div>
+      <button class="gen-item-vocal" onclick="event.stopPropagation();vocalItem('quiz',this)" title="Écouter l'explication">🔊</button>
+      <span class="gen-item-arrow">›</span>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+/* ── ENREGISTREMENT SERVICE WORKER PWA ── */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('AdminPocket SW enregistré :', reg.scope))
+      .catch(err => console.log('SW erreur :', err));
+  });
+}
+
+/* ── BANNIÈRE INSTALLATION (Android/Chrome) ── */
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Afficher la bannière personnalisée après 3 secondes
+  setTimeout(() => afficherBanniereInstall(), 3000);
+});
+
+function afficherBanniereInstall() {
+  const b = document.getElementById('installBanner');
+  if (b) b.classList.add('show');
+}
+
+function installerApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(result => {
+    if (result.outcome === 'accepted') {
+      document.getElementById('installBanner').classList.remove('show');
+    }
+    deferredPrompt = null;
+  });
+}
+
+function fermerBanniere() {
+  document.getElementById('installBanner').classList.remove('show');
+}
+
+// iOS : pas de beforeinstallprompt — on détecte Safari iOS et on affiche le guide
+const estIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const estSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const dejaInstalle = window.navigator.standalone;
+
+if (estIOS && estSafari && !dejaInstalle) {
+  setTimeout(() => {
+    document.getElementById('installBannerIOS').classList.add('show');
+  }, 3000);
+}
+</script>
+
+<!-- ── BANNIÈRE INSTALLATION ANDROID / CHROME ── -->
+<div id="installBanner" style="
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+  background: #0A2463; color: #fff;
+  padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 -4px 24px rgba(10,36,99,0.3);
+  font-family: Inter, sans-serif;
+">
+  <div style="width:44px;height:44px;background:#D62828;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏛️</div>
+  <div style="flex:1;">
+    <div style="font-size:14px;font-weight:700;">Installer AdminPocket</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;">Accédez à votre dossier sans navigateur</div>
+  </div>
+  <button onclick="installerApp()" style="
+    padding:10px 18px;background:#D62828;border:none;border-radius:9px;
+    color:#fff;font-family:Inter,sans-serif;font-size:13px;font-weight:700;
+    cursor:pointer;white-space:nowrap;
+  ">Installer</button>
+  <button onclick="fermerBanniere()" style="
+    width:30px;height:30px;background:rgba(255,255,255,0.12);border:none;
+    border-radius:50%;color:#fff;font-size:16px;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  ">✕</button>
+</div>
+<style>
+#installBanner.show { transform: translateY(0); }
+#installBannerIOS.show { transform: translateY(0); }
+</style>
+
+<!-- ── BANNIÈRE INSTALLATION iOS / SAFARI ── -->
+<div id="installBannerIOS" style="
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+  background: #0A2463; color: #fff;
+  padding: 18px 20px 28px;
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 -4px 24px rgba(10,36,99,0.3);
+  font-family: Inter, sans-serif;
+  border-radius: 20px 20px 0 0;
+">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:44px;height:44px;background:#D62828;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">🏛️</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;">Installer AdminPocket</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);">Ajouter à l'écran d'accueil</div>
+      </div>
+    </div>
+    <button onclick="document.getElementById('installBannerIOS').classList.remove('show')" style="
+      width:30px;height:30px;background:rgba(255,255,255,0.12);border:none;
+      border-radius:50%;color:#fff;font-size:16px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+    ">✕</button>
+  </div>
+  <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:16px;">
+    <div style="font-size:13px;line-height:1.8;color:rgba(255,255,255,0.85);">
+      <div style="margin-bottom:8px;">① Appuyez sur <strong style="background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:5px;">⬆ Partager</strong> en bas de Safari</div>
+      <div style="margin-bottom:8px;">② Faites défiler et appuyez sur <strong style="background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:5px;">Sur l'écran d'accueil</strong></div>
+      <div>③ Appuyez sur <strong style="background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:5px;">Ajouter</strong> en haut à droite</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
